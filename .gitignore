@@ -1,0 +1,29 @@
+## [.NET Core 相關]
+bin/
+obj/
+out/
+publish/
+
+## [Visual Studio 相關]
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+
+## [環境設定與機密資訊]
+# 不要上傳正式環境的設定檔（包含 API Key 或資料庫密碼）
+appsettings.Development.json
+appsettings.Production.json
+
+## [SQLite 資料庫]
+# 這是最重要的部分！不要把開發時的測試資料上傳
+*.db
+*.db-shm
+*.db-wal
+
+## [作業系統與快取]
+.DS_Store
+Thumbs.db
+node_modules/
+.npm/

@@ -1,7 +1,29 @@
-﻿@page "/"
+﻿@page "/home"
 
-<PageTitle>Home</PageTitle>
+@inject GlobalState GlobalState
+@inject NavigationManager Navigation
 
-<h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (GlobalState.CurrentUser == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" GutterBottom="true">
+            歡迎, @GlobalState.CurrentUser.Username !
+        </MudText>
+    }
+</MudContainer>
 
-Welcome to your new app.
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (GlobalState.CurrentUser == null)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+}

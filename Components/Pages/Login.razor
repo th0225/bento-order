@@ -1,9 +1,13 @@
+@page "/"
 @page "/login"
 
 @using bento_order.Data
 @using bento_order.Models
+@using bento_order.Services
 
-@inject AppDbContext Db
+@inject BentoDbService BentoDbService
+@inject GlobalState GlobalState
+@inject NavigationManager Navigation
 
 <MudContainer MaxWidth="MaxWidth.Small" Style="heigit: 80vh;"
     Class="d-flex align-center justify-center">
@@ -43,6 +47,19 @@
     // 登錄系統
     private async Task HandleLogin()
     {
-
+        // 使用者登錄
+        var user = await BentoDbService.LoginAsync(_username, _password);
+        if (user != null)
+        {
+            // 儲存登入者資訊
+            GlobalState.CurrentUser = user;
+            // 跳轉至首頁
+            Navigation.NavigateTo("/home");
+            _errorMessage = string.Empty;
+        }
+        else
+        {
+            _errorMessage = "帳號密碼有誤";
+        }
     }
 }

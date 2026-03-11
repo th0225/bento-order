@@ -8,7 +8,7 @@ using MudBlazor.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Sqlite資料庫
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite("Data Source=app.db"));
 // Add services to the container.
 builder.Services.AddRazorComponents()

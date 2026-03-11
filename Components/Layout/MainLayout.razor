@@ -1,10 +1,12 @@
 ﻿@using System.Security.Cryptography.X509Certificates
 @using MudBlazor.Utilities
+@using System.Text.Json
 @inherits LayoutComponentBase
 @rendermode InteractiveAuto
 
 @inject GlobalState GlobalState
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 @implements IDisposable
 
@@ -14,25 +16,30 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1">
+    @if (GlobalState.CurrentUser != null)
+    {
+        <MudAppBar Elevation="1">
         <MudText Typo="Typo.h6">bento order</MudText>
         <MudSpacer />
+        <MudText Typo="Typo.body2" Class="mr-4">
+            @GlobalState.CurrentUser.Username
+        </MudText>
+        <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
+            OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout">
+            登出
+        </MudButton>
         <MudIconButton
             Icon="@(GlobalState.IsDarkMode ? Icons.Material.Filled.LightMode :
                 Icons.Material.Filled.DarkMode)"
             Color="Color.Inherit"
             OnClick="@ToggleDarkMode" />
-    </MudAppBar>
+        </MudAppBar>
+    }
+
     <MudMainContent>
         @Body
     </MudMainContent>
 </MudLayout>
-
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
 
 @code {
     // 主題顏色配置
@@ -71,7 +78,7 @@
     // 頁面渲染完成後，從local storage取得資料
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && GlobalState.CurrentUser == null)
         {
             // 讀取儲存的主題設定
             string? savedMode = await JS.InvokeAsync<string>(
@@ -83,6 +90,23 @@
                 if (GlobalState.IsDarkMode != isDark)
                 {
                     GlobalState.SetDarkMode(isDark);
+                    StateHasChanged();
+                }
+            }
+
+            // 讀取使用者資料
+            string userJson = await JS.InvokeAsync<string>(
+                "localStorage.getItem", "user");
+            if (!string.IsNullOrEmpty(userJson))
+            {
+                // 反序列化使用者資料
+                var userSession =
+                    JsonSerializer.Deserialize<UserSession?>(userJson);
+
+                if (userSession != null)
+                {
+                    Navigation.NavigateTo("/home");
+                    GlobalState.CurrentUser = userSession;
                     StateHasChanged();
                 }
             }
@@ -98,5 +122,17 @@
             "localStorage.setItem",
             "darkMode", newMode.ToString()
         );
+    }
+
+    // 使用者登出
+    private async Task HandleLogout()
+    {
+        // 清除使用者資訊
+        GlobalState.CurrentUser = null;
+        await JS.InvokeVoidAsync(
+            "localStorage.removeItem", "user"
+        );
+        // 跳轉至登錄頁面
+        Navigation.NavigateTo("/");
     }
 }

@@ -1,12 +1,14 @@
 @page "/"
 @page "/login"
 
+@using System.Text.Json
 @using bento_order.Data
 @using bento_order.Models
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
 @inject GlobalState GlobalState
+@inject IJSRuntime JS
 @inject NavigationManager Navigation
 
 <MudContainer MaxWidth="MaxWidth.ExtraSmall" Style="height: 80vh;"
@@ -50,11 +52,24 @@
         var user = await BentoDbService.LoginAsync(_username, _password);
         if (user != null)
         {
+            // 序列化使用者資訊儲存至瀏覽器
+            UserSession userSession = new()
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Role = user.Role
+            };
+            string userJson = JsonSerializer.Serialize(userSession);
+            await JS.InvokeVoidAsync(
+                "localStorage.setItem",
+                "user", userJson
+            );
+
             // 儲存登入者資訊
-            GlobalState.CurrentUser = user;
+            GlobalState.CurrentUser = userSession;
+
             // 跳轉至首頁
             Navigation.NavigateTo("/home");
-            _errorMessage = string.Empty;
         }
         else
         {

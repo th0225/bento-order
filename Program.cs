@@ -1,4 +1,5 @@
 using bento_order.Components;
+using bento_order.Models;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,9 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 // MudBlazor Service
 builder.Services.AddMudServices();
+
+// 全域狀態
+builder.Services.AddScoped<GlobalState>();
 
 var app = builder.Build();
 

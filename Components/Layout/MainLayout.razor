@@ -1,23 +1,72 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider />
+@inject GlobalState GlobalState
+
+@implements IDisposable
+
+@rendermode InteractiveAuto
+
+<MudThemeProvider @bind-IsDarkMode="@GlobalState.IsDarkMode"
+    Theme="@CustomTheme"/>
 <MudPopoverProvider />
 <MudSnackbarProvider />
 
-<div class="page">
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudText Typo="Typo.h6">bento order</MudText>
+        <MudSpacer />
+        <MudIconButton
+            Icon="@(GlobalState.IsDarkMode ? Icons.Material.Filled.LightMode :
+                Icons.Material.Filled.DarkMode)"
+            Color="Color.Inherit"
+            OnClick="@(() => GlobalState.SetDarkMode(!GlobalState.IsDarkMode))" />
+    </MudAppBar>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    // 主題顏色配置
+    private readonly MudTheme CustomTheme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#FF9800",
+            Secondary = "#F57C00",
+            AppbarBackground = "#FF9800",
+
+            Background = "#FFFDF5",
+            Surface = "#FFFFFF",
+
+            Info = "#FB8C00",
+            Success = "#4CAF50"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#FFA726",
+            Secondary = "#FB8C00",
+            Background = "#1A1A1A",
+            Surface = "#272727",
+            AppbarBackground = "#1A1A1A",
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        GlobalState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        GlobalState.OnChange -= StateHasChanged;
+    }
+}

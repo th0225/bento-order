@@ -1,4 +1,5 @@
 ﻿@using System.Security.Cryptography.X509Certificates
+@using MudBlazor.Utilities
 @inherits LayoutComponentBase
 @rendermode InteractiveAuto
 
@@ -39,24 +40,17 @@
     {
         PaletteLight = new PaletteLight()
         {
-            Primary = "#FF9800",
-            Secondary = "#F57C00",
-            AppbarBackground = "#FF9800",
-
-            Background = "#FFFDF5",
-            Surface = "#FFFFFF",
-
-            Info = "#FB8C00",
-            Success = "#4CAF50"
+            Primary = Colors.Orange.Lighten1,
+            Secondary = Colors.Pink.Lighten4,
+            AppbarBackground = Colors.Orange.Lighten1,
+            Background = Colors.Gray.Lighten3,
         },
         PaletteDark = new PaletteDark()
         {
-            Primary = "#FFA726",
-            Secondary = "#FB8C00",
-            AppbarBackground = "#1E1E1E",
-
-            Background = "#121212",
-            Surface = "#1E1E1E",
+            Primary = Colors.Orange.Darken1,
+            Secondary = Colors.Pink.Darken4,
+            AppbarBackground = Colors.Orange.Darken1,
+            @* Background = "#121212", *@
         }
     };
 

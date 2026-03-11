@@ -23,10 +23,55 @@ public class BentoDbService
         );
     }
 
+    // 取得使用者資料
     public async Task<List<User>> GetUsersAsync()
     {
         using var db = _dbFactory.CreateDbContext();
         return await db.Users.ToListAsync();
+    }
+
+    // 新增使用者
+    public async Task<bool> AddUserAsync(User user)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        // 檢查帳號是否重覆
+        if (await db.Users.AnyAsync(u => u.Username == user.Username))
+        {
+            return false;
+        }
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        
+        return true;
+    }
+
+    // 更新使用者資料
+    public async Task<bool> UpdateUser(User user)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        var updateUser = await db.Users.FindAsync(user.Id);
+
+        if (updateUser != null)
+        {
+            db.Users.Update(user);
+            await db.SaveChangesAsync();
+        }
+
+        return true;
+    }
+
+    // 刪除使用者
+    public async Task DeleteUserAsync(int userId)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        var user = await db.Users.FindAsync(userId);
+        if (user != null && user.Role != "admin")
+        {
+            db.Users.Remove(user);
+            await db.SaveChangesAsync();
+        }
     }
 
     // --- 餐點訂購相關 ---

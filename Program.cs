@@ -1,5 +1,7 @@
 using bento_order.Components;
+using bento_order.Data;
 using bento_order.Models;
+using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,9 +11,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 // MudBlazor Service
 builder.Services.AddMudServices();
-
 // 全域狀態
 builder.Services.AddScoped<GlobalState>();
+// Sqlite資料庫
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=app.db"));
 
 var app = builder.Build();
 

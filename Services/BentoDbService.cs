@@ -46,22 +46,6 @@ public class BentoDbService
         return true;
     }
 
-    // 更新使用者資料
-    public async Task<bool> UpdateUser(User user)
-    {
-        using var db = _dbFactory.CreateDbContext();
-
-        var updateUser = await db.Users.FindAsync(user.Id);
-
-        if (updateUser != null)
-        {
-            db.Users.Update(user);
-            await db.SaveChangesAsync();
-        }
-
-        return true;
-    }
-
     // 刪除使用者
     public async Task DeleteUserAsync(int userId)
     {

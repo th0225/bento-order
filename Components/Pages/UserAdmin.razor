@@ -1,0 +1,138 @@
+@page "/admin/users"
+
+@using bento_order.Models
+@using bento_order.Services
+
+@inject BentoDbService BentoDbService
+@inject GlobalState GlobalState
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+@if (!GlobalState.IsInitialized)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+        <MudText Typo="Typo.h5" GutterBottom="true">
+            使用者管理
+        </MudText>
+
+        <MudPaper Class="pa-4 mb-6">
+            <MudGrid>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_newUser.Username" Label="帳號"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="3">
+                    <MudTextField @bind-Value="_newUser.PasswordHash" Label="密碼"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="3">
+                    <MudSelect @bind-Value="_newUser.Role" Label="權限"
+                        Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="@("User")">一般使用者</MudSelectItem>
+                        <MudSelectItem Value="@("Admin")">管理員</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="2" Class="d-flex align-center">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                        FullWidth="true" OnClick="CreateUser">
+                        新增
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudTable Items="_users" Hover="true" Elevation="1" Class="mt-4">
+            <HeaderContent>
+                <MudTh>帳號</MudTh>
+                <MudTh>權限</MudTh>
+                <MudTh Style="text-align: right">操作</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="帳號">@context.Username</MudTd>
+                <MudTd DataLabel="權限">@context.Role</MudTd>
+                <MudTd DataLabel="操作" Style="text-align: right">
+                    @if (context.Role != "Admin")
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                            Color="Color.Error"
+                            OnClick="@(() => RemoveUser(context.Id))" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudContainer>
+}
+
+@code {
+    private List<User> _users = new();
+    private User _newUser = new() { Role = "User"};
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 確認是否初始化
+            await GlobalState.EnsureInitialized(JS);
+
+            if (GlobalState.CurrentUser == null || !GlobalState.IsAdmin)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                await LoadUsers();
+                StateHasChanged();
+            }
+        }
+    }
+
+    // 讀取使用者
+    private async Task LoadUsers() => 
+        _users = await BentoDbService.GetUsersAsync();
+
+    // 新增使用者
+    private async Task CreateUser()
+    {
+        // 需輸入帳號密碼
+        if (string.IsNullOrWhiteSpace(_newUser.Username) ||
+            string.IsNullOrEmpty(_newUser.PasswordHash))
+        {
+            return;
+        }
+
+        // 新增至資料庫
+        var success = await BentoDbService.AddUserAsync(_newUser);
+        if (success)
+        {
+            // 重置表格
+            _newUser = new() { Role = "User" };
+            // 讀取使用者資料
+            await LoadUsers();
+
+            Snackbar.Add("使用者新增成功", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("帳號已存在! ", Severity.Error);
+        }
+    }
+
+    // 刪除資料者
+    private async Task RemoveUser(int id)
+    {
+        // 從資料庫刪除
+        await BentoDbService.DeleteUserAsync(id);
+        // 讀取使用者資料
+        await LoadUsers();
+
+        Snackbar.Add("已刪除使用者", Severity.Info);
+    }
+}

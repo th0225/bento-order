@@ -76,4 +76,22 @@
             _errorMessage = "帳號密碼有誤";
         }
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 確認是否初始化
+            await GlobalState.EnsureInitialized(JS);
+
+            if (GlobalState.CurrentUser == null)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                Navigation.NavigateTo("/home");
+            }
+        }
+    }
 }

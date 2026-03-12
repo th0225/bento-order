@@ -1,30 +1,122 @@
 ﻿@page "/home"
+@using System.Globalization
 
 @inject GlobalState GlobalState
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-@if (!GlobalState.IsInitialized)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-}
-else
-{
-    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-        @if (GlobalState.CurrentUser == null)
-        {
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 pb-8">
+    @if (!GlobalState.IsInitialized)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Elevation="0" Class="pa-6 rounded-xl shadow-cream mb-6">
+            <div class="d-flex align-center">
+                <div class="month-display">
+                    <MudText Typo="Typo.h4" Style="font-weight: 800">
+                        @_currentDate.ToString("yyyy")
+                    </MudText>
+                    <MudText Typo="Typo.h5" Style="margin-top: -8px;">
+                        @_currentDate.ToString(
+                            "MMMM",
+                            CultureInfo.CreateSpecificCulture("zh-TW"))
+                    </MudText>
+                </div>
+
+                <MudSpacer />
+
+                <div class="nav-controls">
+                    <MudIconButton Color="Color.Inherit"
+                        Icon="@Icons.Material.Filled.ArrowBackIosNew"
+                        OnClick="PrevMonth" />
+                    <MudButton Variant="Variant.Text" OnClick="GoToToday"
+                        Style="font-weight: bold;">
+                        今天
+                    </MudButton>
+                    <MudIconButton Color="Color.Inherit"
+                        Icon="@Icons.Material.Filled.ArrowForwardIos"
+                        OnClick="NextMonth" />
+                </div>
+            </div>
+        </MudPaper>
+
+        <div class="calendar-wrapper">
+            <div class="calendar-grid mb-2">
+                @foreach (var day in _weekDays)
+                {
+                    <div class="weekday-header">@day</div>
+                }
+            </div>
+
+            <div class="calendar-grid">
+                @for (int i = 0; i < _emptyDaysBefore; i++)
+                {
+                    <div class="empty-cell" />
+                }
+
+                @for (int d = 1; d <= _daysInMonth; d++)
+                {
+                    var date = new DateTime(
+                        _currentDate.Year, _currentDate.Month, d
+                    );
+
+                    <CalendarCell Date="@date" />
+                }
+            </div>
+        </div>
+    }
+</MudContainer>
+
+<style>
+    .shadow-cream {
+        box-shadow: 0 10px 30px rgba(121, 85, 72, 0.05);
+    }
+
+    .month-display {
+        border-left: 5px solid #FFCC80;
+        padding-left: 16px;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+    }
+
+    .weekday-header {
+        text-align: center;
+        font-weight: 800;
+        color: #BCAA99;
+        font-size: 0.85rem;
+        padding-bottom: 8px;
+    }
+
+    .empty-cell {
+        background: transparent;
+    }
+
+    /* 針對手機端的簡易適應 */
+    @@media (max-width: 960px) {
+        .calendar-grid {
+            gap: 6px;
         }
-        else
-        {
-            <MudText Typo="Typo.h4" GutterBottom="true">
-                歡迎, @GlobalState.CurrentUser.Username !
-            </MudText>
-        }
-    </MudContainer>
-}
+    }
+</style>
 
 @code {
+    private DateTime _currentDate = DateTime.Today;
+    private readonly string[] _weekDays = {
+        "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"
+    };
+    private int _daysInMonth => DateTime.DaysInMonth(
+        _currentDate.Year, _currentDate.Month
+    );
+    private int _emptyDaysBefore => (int)new DateTime(
+        _currentDate.Year, _currentDate.Month, 1
+    ).DayOfWeek;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -41,5 +133,27 @@ else
                 StateHasChanged();
             }
         }
+    }
+
+    private async Task LoadMonthData(){}
+
+    private async Task HandleSaveOrder(){}
+
+    private async Task PrevMonth()
+    {
+        _currentDate = _currentDate.AddMonths(-1);
+        await LoadMonthData();
+    }
+
+    private async Task NextMonth()
+    {
+        _currentDate = _currentDate.AddMonths(1);
+        await LoadMonthData();
+    }
+
+    private async Task GoToToday()
+    {
+        _currentDate = DateTime.Today;
+        await LoadMonthData();
     }
 }

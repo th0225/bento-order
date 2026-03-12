@@ -20,6 +20,9 @@ builder.Services.AddScoped<GlobalState>();
 // 資料庫操作
 builder.Services.AddScoped<BentoDbService>();
 
+// 餐點資料
+builder.Services.AddSingleton<IMealProvider, MealProvider>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

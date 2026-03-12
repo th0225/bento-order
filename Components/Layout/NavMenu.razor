@@ -1,8 +1,20 @@
+@inject GlobalState GlobalState
+
 <MudNavMenu>
-    <MudNavLink Href="/home" Icon="@Icons.Material.Filled.Home">
-        首頁
-    </MudNavLink>
-    <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">
-        使用者管理
-    </MudNavLink>
+    @if (!GlobalState.IsAdmin)
+    {
+        <MudNavLink Href="/home" Icon="@Icons.Material.Filled.Home">
+            首頁
+        </MudNavLink>
+    }
+    else
+    {
+        <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">
+            使用者管理
+        </MudNavLink>
+    }
 </MudNavMenu>
+
+@code {
+
+}

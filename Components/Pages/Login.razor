@@ -68,8 +68,15 @@
             // 儲存登入者資訊
             GlobalState.CurrentUser = userSession;
 
-            // 跳轉至首頁
-            Navigation.NavigateTo("/home");
+            if (GlobalState.IsAdmin)
+            {
+                Navigation.NavigateTo("/admin/users");
+            }
+            else
+            {
+                // 跳轉至首頁
+                Navigation.NavigateTo("/home");
+            }
         }
         else
         {
@@ -90,7 +97,14 @@
             }
             else
             {
-                Navigation.NavigateTo("/home");
+                if (GlobalState.IsAdmin)
+                {
+                    Navigation.NavigateTo("/admin/users");
+                }
+                else
+                {
+                    Navigation.NavigateTo("/home");
+                }
             }
         }
     }

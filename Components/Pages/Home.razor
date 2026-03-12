@@ -2,28 +2,44 @@
 
 @inject GlobalState GlobalState
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    @if (GlobalState.CurrentUser == null)
-    {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudText Typo="Typo.h4" GutterBottom="true">
-            歡迎, @GlobalState.CurrentUser.Username !
-        </MudText>
-    }
-</MudContainer>
+@if (!GlobalState.IsInitialized)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        @if (GlobalState.CurrentUser == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudText Typo="Typo.h4" GutterBottom="true">
+                歡迎, @GlobalState.CurrentUser.Username !
+            </MudText>
+        }
+    </MudContainer>
+}
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        base.OnInitialized();
-
-        if (GlobalState.CurrentUser == null)
+        if (firstRender)
         {
-            Navigation.NavigateTo("/login");
+            // 確認是否初始化
+            await GlobalState.EnsureInitialized(JS);
+
+            if (GlobalState.CurrentUser == null)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                StateHasChanged();
+            }
         }
     }
 }

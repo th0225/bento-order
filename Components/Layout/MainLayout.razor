@@ -18,22 +18,27 @@
 <MudLayout>
     @if (GlobalState.CurrentUser != null)
     {
-        <MudAppBar Elevation="1">
-        <MudText Typo="Typo.h6">bento order</MudText>
-        <MudSpacer />
-        <MudText Typo="Typo.body2" Class="mr-4">
-            @GlobalState.CurrentUser.Username
-        </MudText>
-        <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
-            OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout">
-            登出
-        </MudButton>
-        <MudIconButton
-            Icon="@(GlobalState.IsDarkMode ? Icons.Material.Filled.LightMode :
-                Icons.Material.Filled.DarkMode)"
-            Color="Color.Inherit"
-            OnClick="@ToggleDarkMode" />
+        <MudAppBar Elevation="1" Color="Color.Primary">
+            <MudText Typo="Typo.h6">bento order</MudText>
+            <MudSpacer />
+            <MudText Typo="Typo.body2" Class="mr-4">
+                @GlobalState.CurrentUser.Username
+            </MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
+                OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout">
+                登出
+            </MudButton>
+            <MudIconButton
+                Icon="@(GlobalState.IsDarkMode ? Icons.Material.Filled.LightMode :
+                    Icons.Material.Filled.DarkMode)"
+                Color="Color.Inherit"
+                OnClick="@ToggleDarkMode" />
         </MudAppBar>
+
+        <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="2"
+            ClipMode="DrawerClipMode.Always" Style="width: 180px;">
+            <NavMenu />
+        </MudDrawer>
     }
 
     <MudMainContent>
@@ -49,14 +54,14 @@
         {
             Primary = Colors.Orange.Lighten1,
             Secondary = Colors.Pink.Lighten4,
-            AppbarBackground = Colors.Orange.Lighten1,
-            Background = Colors.Gray.Lighten3,
+            @* AppbarBackground = Colors.Orange.Lighten1,
+            Background = Colors.Gray.Lighten3, *@
         },
         PaletteDark = new PaletteDark()
         {
             Primary = Colors.Orange.Darken1,
-            Secondary = Colors.Pink.Darken4,
-            AppbarBackground = Colors.Orange.Darken1,
+            Secondary = Colors.Pink.Accent1,
+            @* AppbarBackground = Colors.Orange.Darken1, *@
             @* Background = "#121212", *@
         }
     };
@@ -78,38 +83,11 @@
     // 頁面渲染完成後，從local storage取得資料
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && GlobalState.CurrentUser == null)
+        if (firstRender)
         {
-            // 讀取儲存的主題設定
-            string? savedMode = await JS.InvokeAsync<string>(
-                "localStorage.getItem", "darkMode");
-            
-            if (!string.IsNullOrEmpty(savedMode))
-            {
-                bool isDark = bool.Parse(savedMode);
-                if (GlobalState.IsDarkMode != isDark)
-                {
-                    GlobalState.SetDarkMode(isDark);
-                    StateHasChanged();
-                }
-            }
-
-            // 讀取使用者資料
-            string userJson = await JS.InvokeAsync<string>(
-                "localStorage.getItem", "user");
-            if (!string.IsNullOrEmpty(userJson))
-            {
-                // 反序列化使用者資料
-                var userSession =
-                    JsonSerializer.Deserialize<UserSession?>(userJson);
-
-                if (userSession != null)
-                {
-                    Navigation.NavigateTo("/home");
-                    GlobalState.CurrentUser = userSession;
-                    StateHasChanged();
-                }
-            }
+            // 確認是否初始化
+            await GlobalState.EnsureInitialized(JS);
+            StateHasChanged();
         }
     }
 

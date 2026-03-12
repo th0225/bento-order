@@ -1,167 +1,130 @@
 @inject IMealProvider MealProvider
 
-<div class="cell-wrapper @GetCellClass()">
+<div class="cell-wrapper @(IsWeekend ? "weekend" : "weekday") shadow-soft">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
         @if (IsToday)
         {
-            <div class="today-indicator">TODAY</div>
+            <div class="today-tag">TODAY</div>
         }
     </div>
 
-    <div class="cell-content">
-        @if (!IsWeekend)
-        {
-            <div class="meal-group">
-                <div class="group-label">餐點1</div>
-                <div class="select-row">
-                    <MudSelect T="string" Placeholder="餐點" Dense="true"
-                        Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="meal-main">
-                        @foreach (var type in MealProvider.GetMealTypes())
-                        {
-                            <MudSelectItem Value="@type" />
-                        }
-                    </MudSelect>
-                    <MudSelect T="string" Placeholder="飯量" Dense="true"
-                        Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="meal-sub">
-                        @foreach (var opt in MealProvider.GetMealOptions())
-                        {
-                            <MudSelectItem Value="@opt" />
-                        }
-                    </MudSelect>
-                </div>
+    <div class="@(IsWeekend ? "rest-mode" : "cell-body")">
+        <div class="meal-section">
+            <div class="section-label">餐點1</div>
+            <div class="select-group">
+                <MudSelect T="string" Placeholder="餐點" Dense="true"
+                    Variant="Variant.Text" Margin="Margin.Dense"
+                    Class="flex-grow-2">
+                    @foreach (var type in MealProvider.GetMealTypes())
+                    {
+                        <MudSelectItem Value="@type" />
+                    }
+                </MudSelect>
+                <MudSelect T="string" Placeholder="飯量" Dense="true"
+                    Variant="Variant.Text" Margin="Margin.Dense"
+                    Class="flex-grow-1">
+                    @foreach (var opt in MealProvider.GetMealOptions())
+                    {
+                        <MudSelectItem Value="@opt" />
+                    }
+                </MudSelect>
             </div>
+        </div>
 
-            <div class="meal-group">
-                <div class="group-label">餐點2</div>
-                <div class="select-row">
-                    <MudSelect T="string" Placeholder="餐點" Dense="true"
-                        Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="meal-main">
-                        @foreach (var type in MealProvider.GetMealTypes())
-                        {
-                            <MudSelectItem Value="@type" />
-                        }
-                    </MudSelect>
-                    <MudSelect T="string" Placeholder="飯量" Dense="true"
-                        Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="meal-sub">
-                        @foreach (var opt in MealProvider.GetMealOptions())
-                        {
-                            <MudSelectItem Value="@opt" />
-                        }
-                    </MudSelect>
-                </div>
+        <div class="meal-section">
+            <div class="section-label">餐點2</div>
+            <div class="select-group">
+                <MudSelect T="string" Placeholder="餐點" Dense="true"
+                    Variant="Variant.Text" Margin="Margin.Dense"
+                    Class="flex-grow-2">
+                    @foreach (var type in MealProvider.GetMealTypes())
+                    {
+                        <MudSelectItem Value="@type" />
+                    }
+                </MudSelect>
+                <MudSelect T="string" Placeholder="飯量" Dense="true"
+                    Variant="Variant.Text" Margin="Margin.Dense"
+                    Class="flex-grow-1">
+                    @foreach (var opt in MealProvider.GetMealOptions())
+                    {
+                        <MudSelectItem Value="@opt" />
+                    }
+                </MudSelect>
             </div>
-        }
-        else
-        {
-            <div class="weekend-placeholder">
-                <MudIcon Icon="@Icons.Material.Filled.Coffee"
-                    Size="Size.Small" Color="Color.Default" />
-                <span class="mt-1">休息</span>
-            </div>
-        }
+        </div>
     </div>
 </div>
 
 <style>
-    /* 元件外殼 */
     .cell-wrapper {
-        min-height: 155px;
-        padding: 6px;
+        min-height: 160px;
+        display: flex;
+        flex-direction: column;
+        padding: 8px;
         border-radius: 16px;
-        background-color: #FFFDF6; /* 更柔和的奶油白 */
-        border: 1.5px solid #F0EBE3;
-        display: flex;
-        flex-direction: column;
-        transition: all 0.2s ease;
+        transition: transform 0.2s;
+        background-color: #FFFFFF;
+        box-shadow: 0 4px 12px rgba(93, 64, 55, 0.06); 
+        border: 1px solid #EAE4DD;
+    }
+    /* 滑鼠移入格子的效果 */
+    .cell-wrapper:hover { 
+        border-color: #FFA726;
+        box-shadow: 0 8px 20px rgba(255, 152, 0, 0.12);
+        border-color: var(--mud-palette-primary);
+    }
+    
+    .weekday {
+        background-color: #FFFFFF;
+    }
+    .weekend {
+        background-color: #DBD5CF; 
+        border-style: dashed;
     }
 
-    .cell-weekend {
-        background-color: #F9F9F9;
-        border: 1.5px dashed #E0E0E0;
-    }
-
-    /* 標題與日期 */
     .cell-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2px;
+        display: flex; justify-content: space-between; align-items: center;
     }
-
     .day-num {
+        font-weight: bold; color: var(--mud-palette-text-primary);
+    }
+    .today-tag { 
+        font-size: 0.65rem; 
+        background-color: #FFE0B2; /* 淺橘色 */
+        color: #E65100; /* 深橘色文字 */
+        padding: 1px 8px; 
+        border-radius: 4px; 
         font-weight: 800;
-        color: #795548;
-        font-size: 0.9rem;
     }
 
-    .today-indicator {
-        font-size: 0.6rem;
-        background-color: #FFCC80;
-        color: #E65100;
-        padding: 0 6px;
-        border-radius: 10px;
+    .meal-section {
+        margin-top: 4px;
+    }
+    .section-label { 
+        font-size: 0.65rem; 
+        color: #8D6E63; /* 改用褐色標籤，視覺更穩重 */
         font-weight: bold;
     }
-
-    /* 內容佈局 */
-    .cell-content {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-evenly;
+    
+    .select-group {
+        display: flex; gap: 4px;
+    }
+    .flex-grow-2 {
+        flex: 2;
+    }
+    .flex-grow-1 {
+        flex: 1;
     }
 
-    .meal-group {
-        display: flex;
-        flex-direction: column;
+    .rest-mode { 
+        flex: 1; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; color: #BDBDBD; 
     }
 
-    .group-label {
-        font-size: 0.6rem;
-        color: #BCAA99;
-        font-weight: bold;
-        margin-bottom: -4px;
-        margin-left: 2px;
-    }
-
-    .select-row {
-        display: flex;
-        gap: 4px;
-    }
-
-    .meal-main { flex: 62; }
-    .meal-sub { flex: 38; }
-
-    /* 假日占位符 */
-    .weekend-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: #BDBDBD;
-        font-size: 0.75rem;
-    }
-
-    /* MudBlazor 樣式微調 (CSS 穿透) */
-    ::deep .mud-input {
-        font-size: 0.75rem !important;
-        margin-top: 0 !important;
-    }
+    /* 隱藏 MudSelect 預設底線顏色，讓介面更乾淨 */
     ::deep .mud-input > input.mud-input-root {
-        padding: 4px 0 !important;
-    }
-    ::deep .mud-select .mud-select-input .mud-input-adornment {
-        margin-inline-start: 0 !important;
-    }
-    /* 隱藏底線，讓介面更乾淨 */
-    ::deep .mud-input-underline:before {
-        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+        font-size: 0.75rem !important;
     }
 </style>
 

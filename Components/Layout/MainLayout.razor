@@ -19,24 +19,31 @@
 <MudLayout>
     @if (GlobalState.CurrentUser != null)
     {
-        <MudAppBar Elevation="1" Color="Color.Primary">
-            <MudText Typo="Typo.h6">bento order</MudText>
+        <MudAppBar Elevation="0" Color="Color.Inherit" Class="main-appbar"
+            Edge="Edge.Start">
+            <MudText Typo="Typo.h6" Class="ml-3"
+                Style="color: #4E342E; font-weight: 800;">
+                bento order
+            </MudText>
             <MudSpacer />
-            <MudText Typo="Typo.body2" Class="mr-4">
+            <MudText Typo="Typo.body2" Class="mr-4"
+                Style="color: #4E342E; font-weight: 800;">
                 @GlobalState.CurrentUser.Username
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
-                OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout">
+                OnClick="HandleLogout"
+                Style="color: #4E342E; font-weight: 800;"
+                StartIcon="@Icons.Material.Filled.Logout">
                 登出
             </MudButton>
             <MudIconButton
                 Icon="@(GlobalState.IsDarkMode ? Icons.Material.Filled.LightMode :
                     Icons.Material.Filled.DarkMode)"
-                Color="Color.Inherit"
+                Color="Color.Inherit" hidden
                 OnClick="@ToggleDarkMode" />
         </MudAppBar>
 
-        <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="2"
+        <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="0"
             ClipMode="DrawerClipMode.Always" Style="width: 180px;">
             <NavMenu />
         </MudDrawer>
@@ -53,17 +60,33 @@
     {
         PaletteLight = new PaletteLight()
         {
-            Primary = Colors.Orange.Lighten1,
-            Secondary = Colors.Pink.Lighten4,
-            @* AppbarBackground = Colors.Orange.Lighten1,
-            Background = Colors.Gray.Lighten3, *@
+            AppbarBackground = "#F7F3EE",
+            AppbarText = "#4E342E",
+            Background = "#F7F3EE",
+            
+            Primary = "#FF9800",
+            Secondary = "#8D6E63",
+            
+            DrawerBackground = "#FFFEFA",
+            DrawerText = "#4E342E",
+            DrawerIcon = "#FF9800",
+
+            Surface = "#FFFFFF",
+            LinesDefault = "#E0D7C6",
         },
-        PaletteDark = new PaletteDark()
+        LayoutProperties = new LayoutProperties()
         {
-            Primary = Colors.Orange.Darken1,
-            Secondary = Colors.Pink.Accent1,
-            @* AppbarBackground = Colors.Orange.Darken1, *@
-            @* Background = "#121212", *@
+            DefaultBorderRadius = "12px",
+            AppbarHeight = "64px"
+        },
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] {
+                    "Noto Sans TC", "微軟正黑體", "sans-serif"
+                }
+            }
         }
     };
 

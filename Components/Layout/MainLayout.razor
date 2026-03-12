@@ -43,10 +43,14 @@
                 OnClick="@ToggleDarkMode" />
         </MudAppBar>
 
-        <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="0"
-            ClipMode="DrawerClipMode.Always" Style="width: 180px;">
-            <NavMenu />
-        </MudDrawer>
+        @if (GlobalState.IsAdmin)
+        {
+            <MudDrawer Open="true" Variant="DrawerVariant.Persistent"
+                Elevation="0" ClipMode="DrawerClipMode.Always"
+                Style="width: 180px;">
+                <NavMenu />
+            </MudDrawer>
+        }
     }
 
     <MudMainContent>

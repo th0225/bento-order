@@ -6,6 +6,7 @@
 @inject BentoDbService BentoDbService
 @inject GlobalState GlobalState
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
@@ -128,11 +129,34 @@ else
     // 刪除資料者
     private async Task RemoveUser(int id)
     {
-        // 從資料庫刪除
-        await BentoDbService.DeleteUserAsync(id);
-        // 讀取使用者資料
-        await LoadUsers();
+        // 設定dialog參數
+        var parameters =
+            new DialogParameters<CustomDialog>
+        {
+            { x => x.Title, "刪除資料"},
+            { x => x.Content, "確定要刪除使用者嗎？"}
+        };
+        // 設定dialog外觀
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+        // 呼叫dialog
+        var dialog = 
+            await DialogService.ShowAsync<CustomDialog>(
+            "", parameters, options
+        );
+        var result = await dialog.Result;
 
-        Snackbar.Add("已刪除使用者", Severity.Info);
+        if (result is { Canceled: false})
+        {
+            // 從資料庫刪除
+            await BentoDbService.DeleteUserAsync(id);
+            // 讀取使用者資料
+            await LoadUsers();
+
+            Snackbar.Add("已刪除使用者", Severity.Info);
+        }
     }
 }

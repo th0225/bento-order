@@ -13,7 +13,7 @@
         <div class="meal-section">
             <div class="section-label">餐點1</div>
             <div class="select-group">
-                <MudSelect T="string" Placeholder="餐點" Dense="true"
+                <MudSelect T="string" Placeholder="餐點" Dense Clearable
                     Variant="Variant.Text" Margin="Margin.Dense"
                     Class="flex-grow-2">
                     @foreach (var type in MealProvider.GetMealTypes())
@@ -21,21 +21,18 @@
                         <MudSelectItem Value="@type" />
                     }
                 </MudSelect>
-                <MudSelect T="string" Placeholder="飯量" Dense="true"
-                    Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-1">
-                    @foreach (var opt in MealProvider.GetMealOptions())
-                    {
-                        <MudSelectItem Value="@opt" />
-                    }
-                </MudSelect>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                    Class="rice-cycle-btn"
+                    OnClick="@(() => CycleRiceOptions("normal"))">
+                    @GetRiceOptions("normal")
+                </MudButton>
             </div>
         </div>
 
         <div class="meal-section">
             <div class="section-label">餐點2</div>
             <div class="select-group">
-                <MudSelect T="string" Placeholder="餐點" Dense="true"
+                <MudSelect T="string" Placeholder="餐點" Dense Clearable
                     Variant="Variant.Text" Margin="Margin.Dense"
                     Class="flex-grow-2">
                     @foreach (var type in MealProvider.GetMealTypes())
@@ -43,14 +40,11 @@
                         <MudSelectItem Value="@type" />
                     }
                 </MudSelect>
-                <MudSelect T="string" Placeholder="飯量" Dense="true"
-                    Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-1">
-                    @foreach (var opt in MealProvider.GetMealOptions())
-                    {
-                        <MudSelectItem Value="@opt" />
-                    }
-                </MudSelect>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                    Class="rice-cycle-btn"
+                    OnClick="@(() => CycleRiceOptions(""))">
+                    @GetRiceOptions("")
+                </MudButton>
             </div>
         </div>
     </div>
@@ -126,16 +120,64 @@
     ::deep .mud-input > input.mud-input-root {
         font-size: 0.75rem !important;
     }
+
+    .rice-cycle-btn {
+        min-width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        border-radius: 8px !important;
+        border: 1px solid #E0D7C6 !important;
+        color: #5D4037 !important;
+        font-weight: 800 !important;
+    }
+    
+    .rice-cycle-btn:hover {
+        background-color: #FFF3E0 !important;
+        border-color: #FF9800 !important;
+    }
 </style>
 
 @code {
     [Parameter]
     public DateTime Date { get; set; }
-
     private bool IsToday => Date.Date == DateTime.Today;
     private bool IsWeekend => 
         Date.DayOfWeek == DayOfWeek.Saturday ||
         Date.DayOfWeek == DayOfWeek.Sunday;
 
-    private string GetCellClass() => IsWeekend ? "cell-weekend" : "";
+    private MealProvider mealProvider = new();
+    private List<string> _riceOptions = [];
+    private List<int> _riceOptionsIndex = [0, 0];
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _riceOptions = mealProvider.GetMealOptions();
+    }
+
+    private void CycleRiceOptions(string target)
+    {
+        if (target == "normal")
+        {
+            _riceOptionsIndex[0] = 
+                (_riceOptionsIndex[0] + 1) % _riceOptions.Count;
+        }
+        else
+        {
+            _riceOptionsIndex[1] = 
+                (_riceOptionsIndex[1] + 1) % _riceOptions.Count;
+        }
+    }
+
+    private string GetRiceOptions(string target)
+    {
+        if (target == "normal")
+        {
+            return _riceOptions[_riceOptionsIndex[0]];
+        }
+        else
+        {
+            return _riceOptions[_riceOptionsIndex[1]];
+        }
+    }
 }

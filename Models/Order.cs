@@ -7,15 +7,12 @@ public class Order
     [Key]
     public int Id { get; set; }
 
+    [Required]
     public int UserId { get; set; }
 
+    [Required]
     public int BentoItemId { get; set; }
 
     [Required]
-    public string RiceOption { get; set; } = "Normal";
-
     public DateOnly OrderDate { get; set; }
-
-    public User? User { get; set; }
-    public BentoItem? BentoItem { get; set; }
 }

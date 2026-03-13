@@ -75,7 +75,6 @@ public class BentoDbService
         return await db.Orders
             .Where(o => o.OrderDate.Year == year &&
                 o.OrderDate.Month == month)
-            .Include(o => o.BentoItem)
             .ToListAsync();
     }
 }

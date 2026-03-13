@@ -10,9 +10,8 @@ public class AppDbContext : DbContext
 
     // 註冊資料表
     public DbSet<User> Users => Set<User>();
-    public DbSet<BentoItem> BentoItems => Set<BentoItem>();
     public DbSet<Order> Orders => Set<Order>();
-    public DbSet<MonthlyMenu> MonthlyMenus => Set<MonthlyMenu>();
+    public DbSet<MonthlyOrder> MonthlyMenus => Set<MonthlyOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,14 +21,6 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
-        
-        // 建立初始資料
-        modelBuilder.Entity<BentoItem>().HasData(
-            new BentoItem { Id = 1, Name = "A餐"},
-            new BentoItem { Id = 2, Name = "B餐"},
-            new BentoItem { Id = 3, Name = "素食"},
-            new BentoItem { Id = 4, Name = "合菜"}
-        );
 
         // 建立管理員帳號
         modelBuilder.Entity<User>().HasData(

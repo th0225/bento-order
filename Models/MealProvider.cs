@@ -9,11 +9,11 @@ public interface IMealProvider
 public class MealProvider : IMealProvider
 {
     private readonly List<string> _mealTypes = [
-        "A餐", "B餐", "素食", "合菜", "X"
+        "A餐", "B餐", "素食", "合菜"
     ];
 
     private readonly List<string> _mealOptions = [
-        "正常", "飯多", "飯少", "不飯"
+        "普", "多", "少", "無"
     ];
 
     public List<string> GetMealTypes() => _mealTypes;

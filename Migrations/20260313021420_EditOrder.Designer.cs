@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using bento_order.Data;
 
@@ -10,14 +11,61 @@ using bento_order.Data;
 namespace bento_order.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260313021420_EditOrder")]
+    partial class EditOrder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
 
-            modelBuilder.Entity("bento_order.Models.MonthlyOrder", b =>
+            modelBuilder.Entity("bento_order.Models.BentoItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Options")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BentoItems");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "A餐",
+                            Options = ""
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "B餐",
+                            Options = ""
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "素食",
+                            Options = ""
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "合菜",
+                            Options = ""
+                        });
+                });
+
+            modelBuilder.Entity("bento_order.Models.MonthlyMenu", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -58,6 +106,10 @@ namespace bento_order.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BentoItemId");
+
+                    b.HasIndex("UserId");
+
                     b.ToTable("Orders");
                 });
 
@@ -94,6 +146,25 @@ namespace bento_order.Migrations
                             Role = "Admin",
                             Username = "admin"
                         });
+                });
+
+            modelBuilder.Entity("bento_order.Models.Order", b =>
+                {
+                    b.HasOne("bento_order.Models.BentoItem", "BentoItem")
+                        .WithMany()
+                        .HasForeignKey("BentoItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("bento_order.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BentoItem");
+
+                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

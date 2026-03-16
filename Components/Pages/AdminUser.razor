@@ -28,7 +28,7 @@ else
                         Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
 
-                <MudItem xs="12" sm="4">
+                <MudItem xs="12" sm="3">
                     <MudTextField @bind-Value="_newUser.PasswordHash"
                         Label="密碼" Variant="Variant.Outlined"
                         Margin="Margin.Dense"
@@ -41,6 +41,11 @@ else
                         OnAdornmentClick="() => _isShowPassword = !_isShowPassword" />
                 </MudItem>
 
+                <MudItem xs="12" sm="2">
+                    <MudTextField @bind-Value="_newUser.RealName" Label="姓名"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
                 <MudItem xs="12" sm="3">
                     <MudSelect @bind-Value="_newUser.Role" Label="權限"
                         Variant="Variant.Outlined" Margin="Margin.Dense">
@@ -49,11 +54,10 @@ else
                     </MudSelect>
                 </MudItem>
 
-                <MudItem xs="12" sm="2" Class="d-flex align-center">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                        FullWidth="true" OnClick="CreateUser">
-                        新增
-                    </MudButton>
+                <MudItem xs="12" sm="1" Class="d-flex align-center">
+                    <MudIconButton Icon="@Icons.Material.Filled.Add"
+                        Color="Color.Primary" Variant=Variant.Filled
+                        OnClick="CreateUser" />
                 </MudItem>
             </MudGrid>
         </MudPaper>
@@ -62,11 +66,13 @@ else
             Style="background-color: #f8f9fa;">
             <HeaderContent>
                 <MudTh>帳號</MudTh>
+                <MudTh>姓名</MudTh>
                 <MudTh>權限</MudTh>
                 <MudTh Style="text-align: right">操作</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="帳號">@context.Username</MudTd>
+                <MudTd DataLabel="姓名">@context.RealName</MudTd>
                 <MudTd DataLabel="權限">@context.Role</MudTd>
                 <MudTd DataLabel="操作" Style="text-align: right">
                     @if (context.Role != "Admin")

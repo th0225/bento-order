@@ -29,6 +29,10 @@
                 Style="color: #4E342E; font-weight: 800;">
                 @GlobalState.CurrentUser.Username
             </MudText>
+            <MudText Typo="Typo.body2" Class="mr-4"
+                Style="color: #4E342E; font-weight: 800;">
+                @GlobalState.CurrentUser.Realname
+            </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
                 OnClick="HandleLogout"
                 Style="color: #4E342E; font-weight: 800;"

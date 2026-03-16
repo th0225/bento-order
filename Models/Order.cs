@@ -11,8 +11,9 @@ public class Order
     public int UserId { get; set; }
 
     [Required]
-    public int BentoItemId { get; set; }
+    public DateTime OrderDate { get; set; }
 
-    [Required]
-    public DateOnly OrderDate { get; set; }
+    public BentoItem? BentoItem { get; set; } = new();
+
+    public BentoItem? AdditionalBentoItem { get; set; } = new();
 }

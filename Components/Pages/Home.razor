@@ -1,6 +1,8 @@
 ﻿@page "/home"
 @using System.Globalization
+@using bento_order.Services
 
+@inject BentoDbService BentoDbService
 @inject GlobalState GlobalState
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -61,8 +63,19 @@
                     var date = new DateTime(
                         _currentDate.Year, _currentDate.Month, d
                     );
+                    
+                    Order? order = orders?.SingleOrDefault(
+                        o => o.OrderDate == date
+                    );
 
-                    <CalendarCell Date="@date" />
+                    if (order != null)
+                    {
+                        <CalendarCell Date="@date" Order="order"/>
+                    }
+                    else
+                    {
+                        <CalendarCell Date="@date" />
+                    }
                 }
             </div>
         </div>
@@ -107,6 +120,7 @@
 
 @code {
     private DateTime _currentDate = DateTime.Today;
+    private List<Order> orders = [];
     private readonly string[] _weekDays = {
         "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"
     };
@@ -130,30 +144,38 @@
             }
             else
             {
+                await LoadMonthDataAsync();
                 StateHasChanged();
             }
         }
     }
 
-    private async Task LoadMonthData(){}
+    // 取得整月份資料
+    private async Task LoadMonthDataAsync(){
+        // 從db取得餐點資料
+        orders = await BentoDbService.GetOrdersByMonthUserAsync(
+            _currentDate.Year, _currentDate.Month, GlobalState.CurrentUser!.Id
+        );
+    }
 
-    private async Task HandleSaveOrder(){}
-
+    // 上個月
     private async Task PrevMonth()
     {
         _currentDate = _currentDate.AddMonths(-1);
-        await LoadMonthData();
+        await LoadMonthDataAsync();
     }
 
+    // 下個月
     private async Task NextMonth()
     {
         _currentDate = _currentDate.AddMonths(1);
-        await LoadMonthData();
+        await LoadMonthDataAsync();
     }
 
+    // 這個月
     private async Task GoToToday()
     {
         _currentDate = DateTime.Today;
-        await LoadMonthData();
+        await LoadMonthDataAsync();
     }
 }

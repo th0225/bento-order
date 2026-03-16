@@ -12,6 +12,7 @@ public class GlobalState
     // 是否為管理員
     public bool IsAdmin => CurrentUser?.Role == "Admin";
     public event Action? OnChange;
+    // 頁面是否已初始化
     public bool IsInitialized { get; private set; }
 
     public async Task EnsureInitialized(IJSRuntime js)

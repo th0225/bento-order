@@ -1,4 +1,9 @@
+@using bento_order.Services
+
+@inject BentoDbService BentoDbService
 @inject IMealProvider MealProvider
+@inject ISnackbar Snackbar
+@inject GlobalState GlobalState
 
 <div class="cell-wrapper @(IsWeekend ? "weekend" : "weekday") shadow-soft">
     <div class="cell-header">
@@ -15,17 +20,20 @@
             <div class="select-group">
                 <MudSelect T="string" Placeholder="餐點" Dense Clearable
                     Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2">
+                    Class="flex-grow-2"
+                    Value="@(Order!.BentoItem!.Name ?? string.Empty)"
+                    ValueChanged="@((string val) => 
+                        OnMealChanged(val, "normal"))">
                     @foreach (var type in MealProvider.GetMealTypes())
                     {
                         <MudSelectItem Value="@type" />
                     }
                 </MudSelect>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
                     Class="rice-cycle-btn"
                     OnClick="@(() => CycleRiceOptions("normal"))">
                     @GetRiceOptions("normal")
-                </MudButton>
+                </MudButton> *@
             </div>
         </div>
 
@@ -34,17 +42,20 @@
             <div class="select-group">
                 <MudSelect T="string" Placeholder="餐點" Dense Clearable
                     Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2">
+                    Class="flex-grow-2"
+                    Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
+                    ValueChanged="@((string val) => 
+                        OnMealChanged(val, "add"))">
                     @foreach (var type in MealProvider.GetMealTypes())
                     {
                         <MudSelectItem Value="@type" />
                     }
                 </MudSelect>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
                     Class="rice-cycle-btn"
                     OnClick="@(() => CycleRiceOptions(""))">
                     @GetRiceOptions("")
-                </MudButton>
+                </MudButton> *@
             </div>
         </div>
     </div>
@@ -139,23 +150,60 @@
 
 @code {
     [Parameter]
+    [EditorRequired]
     public DateTime Date { get; set; }
+
+    [Parameter]
+    public Order? Order { get; set; } = new();
+
+    private Order _newOrder = new();
+    private CancellationTokenSource? _cts;
     private bool IsToday => Date.Date == DateTime.Today;
     private bool IsWeekend => 
         Date.DayOfWeek == DayOfWeek.Saturday ||
         Date.DayOfWeek == DayOfWeek.Sunday;
 
     private MealProvider mealProvider = new();
+    // "普", "多", "少", "無"
     private List<string> _riceOptions = [];
+    // 0, 1, 2, 3
     private List<int> _riceOptionsIndex = [0, 0];
 
+    // 初始化
     protected override void OnInitialized()
     {
         base.OnInitialized();
         _riceOptions = mealProvider.GetMealOptions();
+
+        if (Order == null)
+        {
+            Order = new Order
+            {
+                BentoItem = new BentoItem
+                {
+                    Name = string.Empty, Option = "正"
+                },
+                AdditionalBentoItem = new BentoItem
+                {
+                    Name = string.Empty, Option = "正"
+                }
+            };
+        }
+        else
+        {
+            Order.BentoItem ??= new BentoItem
+            {
+                Name = string.Empty, Option = "正"
+            };
+            Order.AdditionalBentoItem ??= new BentoItem
+            {
+                Name = string.Empty, Option = "正"
+            };
+        }
     }
 
-    private void CycleRiceOptions(string target)
+    // 循環按鈕
+    private async Task CycleRiceOptions(string target)
     {
         if (target == "normal")
         {
@@ -167,6 +215,8 @@
             _riceOptionsIndex[1] = 
                 (_riceOptionsIndex[1] + 1) % _riceOptions.Count;
         }
+
+        await TriggerAutoSave();
     }
 
     private string GetRiceOptions(string target)
@@ -179,5 +229,44 @@
         {
             return _riceOptions[_riceOptionsIndex[1]];
         }
+    }
+
+    private async Task OnMealChanged(string value, string type)
+    {
+        _newOrder.UserId = GlobalState.CurrentUser!.Id;
+        _newOrder.OrderDate = Date;
+
+        BentoItem bentoItem = new();
+        if (type == "normal")
+        {
+            bentoItem!.Name = value;
+            bentoItem!.Option = _riceOptions[_riceOptionsIndex[0]];
+            _newOrder.BentoItem = bentoItem;
+        }
+        else
+        {
+            bentoItem!.Name = value;
+            bentoItem!.Option = _riceOptions[_riceOptionsIndex[1]];
+            _newOrder.AdditionalBentoItem = bentoItem;
+        }
+
+        await TriggerAutoSave();
+    }
+
+    private async Task TriggerAutoSave()
+    {
+        _cts?.Cancel();
+        _cts = new();
+
+        try
+        {
+            await Task.Delay(500, _cts.Token);
+            await BentoDbService.UpsertOrderAsync(_newOrder);
+
+            Snackbar.Add("資料已同步", Severity.Info);
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException) {}
     }
 }

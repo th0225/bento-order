@@ -69,12 +69,78 @@ public class BentoDbService
         return (true, "訂購成功! ");
     }
 
+    public async Task UpsertOrderAsync(Order order)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        // 同時比對日期和使用者確認資料是否存在
+        var existingOrder = await db.Orders
+            .FirstOrDefaultAsync(o => o.OrderDate == order.OrderDate
+                && o.UserId == order.UserId);
+
+        if (existingOrder == null)
+        {
+            // 新增資料
+            db.Orders.Add(order);
+        }
+        else
+        {
+            existingOrder.BentoItem ??= new();
+            existingOrder.BentoItem.Name =
+                order.BentoItem?.Name ?? string.Empty;
+            existingOrder.BentoItem.Option =
+                order.BentoItem?.Option ?? string.Empty;
+
+            existingOrder.AdditionalBentoItem ??= new();
+            existingOrder.AdditionalBentoItem.Name =
+                order.AdditionalBentoItem?.Name ?? string.Empty;
+            existingOrder.AdditionalBentoItem.Option =
+                order.AdditionalBentoItem?.Option ?? string.Empty;
+
+            // Console.WriteLine("++++++++++++++++");
+            // Console.WriteLine(order.BentoItem.Name);
+            // Console.WriteLine(order.BentoItem.Option);
+            // Console.WriteLine(order.AdditionalBentoItem.Name);
+            // Console.WriteLine(order.AdditionalBentoItem.Option);
+            // Console.WriteLine("------------------");
+
+            db.Orders.Update(existingOrder);
+
+            // 更新資料
+            // db.Entry(existingOrder).CurrentValues.SetValues(order);
+
+            // if (order.BentoItem != null)
+            // {
+            //     db.Entry(existingOrder.BentoItem!)
+            //         .CurrentValues.SetValues(order.BentoItem);
+            // }
+
+            // if (order.AdditionalBentoItem != null)
+            // {
+            //     db.Entry(existingOrder.AdditionalBentoItem!)
+            //         .CurrentValues.SetValues(order.AdditionalBentoItem);
+            // }
+        }
+
+        // 儲存
+        await db.SaveChangesAsync();
+    }
+
     public async Task<List<Order>> GetOrdersByMonthAsync(int year, int month)
     {
         using var db = _dbFactory.CreateDbContext();
         return await db.Orders
             .Where(o => o.OrderDate.Year == year &&
-                o.OrderDate.Month == month)
-            .ToListAsync();
+                o.OrderDate.Month == month).ToListAsync();
+    }
+
+    public async Task<List<Order>> GetOrdersByMonthUserAsync(
+        int year, int month, int userId)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        return await db.Orders
+            .Where(o => o.OrderDate.Year == year &&
+                o.OrderDate.Month == month &&
+                o.UserId == userId).ToListAsync();
     }
 }

@@ -14,7 +14,7 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
         <MudText Typo="Typo.h5" GutterBottom="true">每日餐點統計</MudText>
-        <MudPaper Class="pa-4 mb-2">
+        <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
             <MudDatePicker Label="選擇日期" Date="_selectedDate"
                 PickerVariant="PickerVariant.Dialog"
                 DateChanged="OnDateChanged"
@@ -32,7 +32,7 @@ else
         else
         {
             <MudTable Items="_stats" Breakpoint="Breakpoint.Sm" Elevation="2"
-                Hover Dense>
+                Hover Dense Style="background-color: #f8f9fa;">
                 <HeaderContent>
                     <MudTh>餐點名稱</MudTh>
                     <MudTh>數量</MudTh>
@@ -47,7 +47,7 @@ else
         }
 
         <MudText Typo="Typo.h5" Class="mb-4 mt-6">週期總量結算</MudText>
-        <MudPaper Class="pa-4">
+        <MudPaper Class="pa-4" Style="background-color: #f8f9fa;">
             <MudGrid >
                 <MudItem xs="12" sm="4">
                     <MudDatePicker Label="開始日期" @bind-Date="_periodStart" />

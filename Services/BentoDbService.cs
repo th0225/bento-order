@@ -149,4 +149,28 @@ public class BentoDbService
                 o.OrderDate.Month == month &&
                 o.UserId == userId).ToListAsync();
     }
+
+    public async Task<List<OrderCount>> GetDailyStatsAsync(DateTime date)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        var orders = await db.Orders
+            .Where(o => o.OrderDate.Date == date.Date)
+            .ToListAsync();
+
+        var stats = orders
+            .SelectMany(o => new[] { o.BentoItem, o.AdditionalBentoItem })
+            .Where(i => i != null && !string.IsNullOrEmpty(i.Name))
+            .GroupBy(i => new {i.Name, i.Option })
+            .Select(g => new OrderCount
+            {
+                MealName = g.Key.Name,
+                Option = g.Key.Option,
+                Count = g.Count()
+            })
+            .OrderBy(x => x.MealName)
+            .ToList();
+
+        return stats;
+    }
 }

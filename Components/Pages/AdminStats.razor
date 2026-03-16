@@ -1,0 +1,97 @@
+@page "/admin/stats"
+@using bento_order.Services
+
+@inject BentoDbService BentoDbService
+@inject GlobalState GlobalState
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@if (!GlobalState.IsInitialized)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+        <MudText Typo="Typo.h5" GutterBottom="true">每日餐點統計</MudText>
+
+        <MudPaper Class="pa-4 mb-6">
+            <MudDatePicker Label="選擇日期" Date="_selectedDate"
+                PickerVariant="PickerVariant.Dialog"
+                DateChanged="OnDateChanged"
+                Color="Color.Primary" />
+        </MudPaper>
+
+        @if (_stats == null)
+        {
+            <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+        }
+        else if (_stats.Count == 0)
+        {
+            <MudText>該日期尚無任何訂餐紀錄</MudText>
+        }
+        else
+        {
+            <MudTable Items="_stats" Breakpoint="Breakpoint.Sm" Elevation="2"
+                Hover Dense>
+                <HeaderContent>
+                    <MudTh>餐點名稱</MudTh>
+                    <MudTh>數量</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="餐點">@context.MealName</MudTd>
+                    <MudTd DataLabel="數量">
+                        <MudText Typo="Typo.h6">@context.Count</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudContainer>
+}
+
+@code {
+    private DateTime? _selectedDate = DateTime.Today;
+    private List<OrderCount>? _stats;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 確認是否初始化
+            await GlobalState.EnsureInitialized(JS);
+
+            if (GlobalState.CurrentUser == null || !GlobalState.IsAdmin)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        await LoadStats();
+        StateHasChanged();
+    }
+
+    private async Task OnDateChanged(DateTime? newDate)
+    {
+        _selectedDate = newDate;
+        await LoadStats();
+    }
+
+    private async Task LoadStats()
+    {
+        if (_selectedDate.HasValue)
+        {
+            _stats = await BentoDbService.GetDailyStatsAsync(
+                _selectedDate.Value
+            );
+            StateHasChanged();
+        }
+    }
+}

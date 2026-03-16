@@ -173,4 +173,25 @@ public class BentoDbService
 
         return stats;
     }
+
+    public async Task<int> GetPeriodTotalCountAsync(
+        DateTime start, DateTime end)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        var orders = await db.Orders
+            .Where(o => o.OrderDate >= start.Date &&
+                o.OrderDate.Date <= end.Date)
+            .ToListAsync();
+        
+        int total = orders.Sum(o =>
+            (o.BentoItem != null && !string.IsNullOrEmpty(o.BentoItem.Name) ?
+                1 : 0) +
+            (o.AdditionalBentoItem != null &&
+                !string.IsNullOrEmpty(o.AdditionalBentoItem.Name) ?
+                1 : 0)
+        );
+
+        return total;
+    }
 }

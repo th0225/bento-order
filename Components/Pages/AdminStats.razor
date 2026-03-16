@@ -14,8 +14,7 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
         <MudText Typo="Typo.h5" GutterBottom="true">每日餐點統計</MudText>
-
-        <MudPaper Class="pa-4 mb-6">
+        <MudPaper Class="pa-4 mb-2">
             <MudDatePicker Label="選擇日期" Date="_selectedDate"
                 PickerVariant="PickerVariant.Dialog"
                 DateChanged="OnDateChanged"
@@ -46,12 +45,62 @@ else
                 </RowTemplate>
             </MudTable>
         }
+
+        <MudText Typo="Typo.h5" Class="mb-4 mt-6">週期總量結算</MudText>
+        <MudPaper Class="pa-4">
+            <MudGrid >
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker Label="開始日期" @bind-Date="_periodStart" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker Label="結束日期" @bind-Date="_periodEnd" />
+                </MudItem>
+                <MudItem xs="12" sm="4" Class="d-flex align-end">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                        StartIcon="@Icons.Material.Filled.Calculate"
+                        FullWidth OnClick="CalculateTotal">
+                        計算總數
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+            @if (_totalOrder.HasValue)
+            {
+                <div class="mt-6 d-flex justify-center align-center">
+                    <MudPaper Class="pa-4 d-flex align-center"
+                        Style="border: 2px dashed #666;">
+                        <MudIcon Icon="@Icons.Material.Filled.Restaurant"
+                            Color="Color.Dark" Size="Size.Large" Class="mr-3" />
+                        <div>
+                            <MudText Typo="Typo.subtitle1">
+                                指定期間總計
+                            </MudText>
+                            <MudText Typo="Typo.h3" Color="Color.Primary">
+                                <b>@_totalOrder</b>
+                            </MudText>
+                        </div>
+                    </MudPaper>
+                </div>
+            }
+        </MudPaper>
     </MudContainer>
 }
 
 @code {
     private DateTime? _selectedDate = DateTime.Today;
     private List<OrderCount>? _stats;
+    private DateTime? _periodStart;
+    private DateTime? _periodEnd;
+    private int? _totalOrder;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        var now = DateTime.Today;
+        _periodStart = new DateTime(now.Year, now.Month, 26)
+            .AddMonths(-1);
+        _periodEnd = new DateTime(now.Year, now.Month, 25);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -75,6 +124,7 @@ else
     {
         await base.OnParametersSetAsync();
         await LoadStats();
+        await CalculateTotal();
         StateHasChanged();
     }
 
@@ -92,6 +142,16 @@ else
                 _selectedDate.Value
             );
             StateHasChanged();
+        }
+    }
+
+    private async Task CalculateTotal()
+    {
+        if (_periodStart.HasValue && _periodEnd.HasValue)
+        {
+            _totalOrder = await BentoDbService.GetPeriodTotalCountAsync(
+                _periodStart.Value, _periodEnd.Value
+            );
         }
     }
 }

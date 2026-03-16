@@ -5,9 +5,16 @@
 @inject ISnackbar Snackbar
 @inject GlobalState GlobalState
 
-<div class="cell-wrapper @(IsWeekend ? "weekend" : "weekday") shadow-soft">
+<div class="cell-wrapper @(IsLocked() ? "cell-locked" : IsWeekend ? "weekend" : "weekday") shadow-soft">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
+        @if (IsLocked())
+        {
+            <div class="lock-overlay">
+                <MudIcon Icon="@Icons.Material.Filled.LockClock"
+                    Size="Size.Small" />
+            </div>
+        }
         @if (IsToday)
         {
             <div class="today-tag">TODAY</div>
@@ -20,7 +27,7 @@
             <div class="select-group">
                 <MudSelect T="string" Placeholder="餐點" Dense Clearable
                     Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2"
+                    Class="flex-grow-2" Disabled="@IsLocked()"
                     Value="@(Order!.BentoItem!.Name ?? string.Empty)"
                     ValueChanged="@((string val) => 
                         OnMealChanged(val, "normal"))">
@@ -42,7 +49,7 @@
             <div class="select-group">
                 <MudSelect T="string" Placeholder="餐點" Dense Clearable
                     Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2"
+                    Class="flex-grow-2" Disabled="@IsLocked()"
                     Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
                     ValueChanged="@((string val) => 
                         OnMealChanged(val, "add"))">
@@ -78,6 +85,19 @@
         border-color: #FFA726;
         box-shadow: 0 8px 20px rgba(255, 152, 0, 0.12);
         border-color: var(--mud-palette-primary);
+    }
+    .cell-locked {
+        background-color: #f5f5f5; /* 灰色背景 */
+        pointer-events: none;      /* 確保從 CSS 層級也無法點擊 */
+        opacity: 0.7;
+    }
+    .lock-overlay {
+        font-size: 10px;
+        color: #d32f2f;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 4px;
     }
     
     .weekday {
@@ -179,6 +199,7 @@
         {
             Order = new Order
             {
+                OrderDate = DateTime.Now.Date,
                 BentoItem = new BentoItem
                 {
                     Name = string.Empty, Option = "正"
@@ -268,5 +289,25 @@
             await InvokeAsync(StateHasChanged);
         }
         catch (TaskCanceledException) {}
+    }
+
+    // 鎖定餐點選擇
+    private bool IsLocked()
+    {
+        var now = DateTime.Now;
+        var today = now.Date;
+        var orderDate = Date;
+
+        if (orderDate == today)
+        {
+            return now.Hour >= 9 && now.Minute >= 5;
+        }
+
+        if (orderDate < today)
+        {
+            return true;
+        }
+
+        return false;
     }
 }

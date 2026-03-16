@@ -71,6 +71,12 @@ public class BentoDbService
 
     public async Task UpsertOrderAsync(Order order)
     {
+        var now = DateTime.Now;
+        if (order.OrderDate.Date == now.Date && now.Hour >= 9)
+        {
+            throw new Exception("當日訂餐已於 09:00 截止，無法修改!");
+        }
+
         using var db = _dbFactory.CreateDbContext();
 
         // 同時比對日期和使用者確認資料是否存在

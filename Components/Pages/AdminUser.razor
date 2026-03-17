@@ -149,8 +149,8 @@ else
         var parameters =
             new DialogParameters<CustomDialog>
         {
-            { x => x.Title, "刪除資料"},
-            { x => x.Content, "確定要刪除使用者嗎？"}
+            { x => x.Title, "刪除資料" },
+            { x => x.Content, "確定要刪除使用者嗎？" }
         };
         // 設定dialog外觀
         var options = new DialogOptions
@@ -165,7 +165,7 @@ else
         );
         var result = await dialog.Result;
 
-        if (result is { Canceled: false})
+        if (result is { Canceled: false })
         {
             // 從資料庫刪除
             await BentoDbService.DeleteUserAsync(id);

@@ -254,7 +254,14 @@
 
     private async Task OnMealChanged(string value, string type)
     {
-        _newOrder.UserId = GlobalState.CurrentUser!.Id;
+        if (GlobalState.IsAdmin)
+        {
+            _newOrder.UserId = GlobalState.FakeId;
+        }
+        else
+        {
+            _newOrder.UserId = GlobalState.CurrentUser!.Id;
+        }
         _newOrder.OrderDate = Date;
 
         BentoItem bentoItem = new();
@@ -282,7 +289,8 @@
         try
         {
             await Task.Delay(500, _cts.Token);
-            await BentoDbService.UpsertOrderAsync(_newOrder);
+            await BentoDbService.UpsertOrderAsync(
+                _newOrder, GlobalState.IsAdmin);
 
             Snackbar.Add("資料已同步", Severity.Info);
 
@@ -297,6 +305,11 @@
         var now = DateTime.Now;
         var today = now.Date;
         var orderDate = Date;
+
+        if (GlobalState.IsAdmin)
+        {
+            return false;
+        }
 
         if (orderDate == today)
         {

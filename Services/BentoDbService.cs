@@ -69,12 +69,17 @@ public class BentoDbService
         return (true, "訂購成功! ");
     }
 
-    public async Task UpsertOrderAsync(Order order)
+    public async Task UpsertOrderAsync(Order order, bool isAdmin)
     {
         var now = DateTime.Now;
-        if (order.OrderDate.Date == now.Date && now.Hour >= 9)
+
+        if (!isAdmin)
         {
-            throw new Exception("當日訂餐已於 09:00 截止，無法修改!");
+            if (order.OrderDate.Date < now.Date ||
+                (order.OrderDate.Date == now.Date && now.Hour >= 9))
+            {
+                throw new UnauthorizedAccessException("您沒有權限在截止後修改訂單。");
+            }
         }
 
         using var db = _dbFactory.CreateDbContext();
@@ -140,6 +145,15 @@ public class BentoDbService
                 o.OrderDate.Month == month).ToListAsync();
     }
 
+    public async Task<Order?> GetOrderByUserAsync(int UserId, DateTime date)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        var order = db.Orders
+            .FirstOrDefault(o => o.UserId == UserId &&
+                o.OrderDate.Month == date.Month && o.OrderDate.Day == date.Day);
+        return order;
+    }
+
     public async Task<List<Order>> GetOrdersByMonthUserAsync(
         int year, int month, int userId)
     {
@@ -193,5 +207,41 @@ public class BentoDbService
         );
 
         return total;
+    }
+
+    public async Task<List<UserOrderDisplay>> GetDailyDetailAsync(
+        DateTime date)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        // 取得所有使用者
+        var users = await db.Users
+            .Where(u => u.Role != "Admin")
+            .ToListAsync();
+
+        // 取得當天的所有訂單
+        var orders = await db.Orders
+            .Where(o => o.OrderDate.Date == date.Date)
+            .ToListAsync();
+
+        var result = users.Select(u => {
+            var order = orders.FirstOrDefault(o => o.UserId == u.Id);
+            return new UserOrderDisplay
+            {
+                UserId = u.Id,
+                Username = u.RealName,
+                OrderDate = date,
+                OrderData = order ?? new Order
+                {
+                    UserId = u.Id,
+                    OrderDate = date
+                },
+                HasOrdered = (order != null) &&
+                    !(order?.BentoItem?.Name == string.Empty &&
+                        order?.AdditionalBentoItem?.Name == string.Empty)
+            };
+        }).ToList();
+
+        return result;
     }
 }

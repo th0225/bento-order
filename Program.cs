@@ -19,9 +19,14 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<GlobalState>();
 // 資料庫操作
 builder.Services.AddScoped<BentoDbService>();
+builder.Services.AddScoped<BentoReportService>();
 
 // 餐點資料
 builder.Services.AddSingleton<IMealProvider, MealProvider>();
+// Line訊息通知
+builder.Services.AddSingleton<LineNotifyService>();
+
+builder.Services.AddHostedService<OrderReportService>();
 
 var app = builder.Build();
 

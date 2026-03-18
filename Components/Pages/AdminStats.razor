@@ -2,9 +2,12 @@
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
+@inject BentoReportService BentoReportService
 @inject GlobalState GlobalState
+@inject LineNotifyService LineService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 @if (!GlobalState.IsInitialized)
 {
@@ -15,10 +18,21 @@ else
     <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
         <MudText Typo="Typo.h5" GutterBottom="true">每日餐點統計</MudText>
         <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
-            <MudDatePicker Label="選擇日期" Date="_selectedDate"
-                PickerVariant="PickerVariant.Dialog"
-                DateChanged="OnDateChanged"
-                Color="Color.Primary" />
+            <MudGrid>
+                <MudItem xs="12" sm="8" Class="pt-4">
+                    <MudDatePicker Label="選擇日期" Date="_selectedDate"
+                        PickerVariant="PickerVariant.Dialog"
+                        DateChanged="OnDateChanged"
+                        Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Info"
+                        OnClick="SendTestLineMessage" FullWidth
+                        StartIcon="@Icons.Material.Filled.NotificationAdd">
+                        手動發送Line統計
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
         </MudPaper>
 
         @if (_stats == null)
@@ -152,6 +166,21 @@ else
             _totalOrder = await BentoDbService.GetPeriodTotalCountAsync(
                 _periodStart.Value, _periodEnd.Value
             );
+        }
+    }
+
+    private async Task SendTestLineMessage()
+    {
+        try
+        {
+            await BentoReportService.ProcessAndSendReportAsync();
+            Snackbar.Add(
+                "✅ LINE 統計訊息已成功發送！", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"❌ 發送失敗：{ex.Message}", Severity.Error);
         }
     }
 }

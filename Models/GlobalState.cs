@@ -11,10 +11,13 @@ public class GlobalState
     public UserSession? CurrentUser { get; set; }
     // 是否為管理員
     public bool IsAdmin => CurrentUser?.Role == "Admin";
+    // 供管理員修改使用者餐點
     public int FakeId = 1;
     public event Action? OnChange;
     // 頁面是否已初始化
     public bool IsInitialized { get; private set; }
+    public string? LineId { get; set; } = string.Empty;
+    public string? LineAccessToken { get; set; } = string.Empty;
 
     public async Task EnsureInitialized(IJSRuntime js)
     {

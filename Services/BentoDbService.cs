@@ -59,16 +59,6 @@ public class BentoDbService
     }
 
     // --- 餐點訂購相關 ---
-    public async Task<(bool success, string message)> PlaceOrderAsync(
-        Order order)
-    {
-        using var db = _dbFactory.CreateDbContext();
-
-        db.Orders.Add(order);
-        await db.SaveChangesAsync();
-        return (true, "訂購成功! ");
-    }
-
     public async Task UpsertOrderAsync(Order order, bool isAdmin)
     {
         var now = DateTime.Now;
@@ -135,14 +125,6 @@ public class BentoDbService
 
         // 儲存
         await db.SaveChangesAsync();
-    }
-
-    public async Task<List<Order>> GetOrdersByMonthAsync(int year, int month)
-    {
-        using var db = _dbFactory.CreateDbContext();
-        return await db.Orders
-            .Where(o => o.OrderDate.Year == year &&
-                o.OrderDate.Month == month).ToListAsync();
     }
 
     public async Task<Order?> GetOrderByUserAsync(int UserId, DateTime date)
@@ -243,5 +225,36 @@ public class BentoDbService
         }).ToList();
 
         return result;
+    }
+
+    // --- 系統設定相關 ---
+    public async Task SaveConfigAsync(SystemConfig config)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        var _config = db.SystemConfig.FirstOrDefault(
+            c => c.Key == config.Key);
+        
+        if (_config == null)
+        {
+            db.SystemConfig.Add(new SystemConfig
+            {
+                Key = config!.Key,
+                Value = config!.Value
+            });
+        }
+        else
+        {
+            _config = config;
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<List<SystemConfig>> GetConfigAsync()
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        return await db.SystemConfig.ToListAsync();
     }
 }

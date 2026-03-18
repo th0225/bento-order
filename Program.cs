@@ -15,14 +15,14 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 // MudBlazor Service
 builder.Services.AddMudServices();
-// 全域狀態
-builder.Services.AddScoped<GlobalState>();
 // 資料庫操作
 builder.Services.AddScoped<BentoDbService>();
 builder.Services.AddScoped<BentoReportService>();
 
 // 餐點資料
 builder.Services.AddSingleton<IMealProvider, MealProvider>();
+// 全域狀態
+builder.Services.AddSingleton<GlobalState>();
 // Line訊息通知
 builder.Services.AddSingleton<LineNotifyService>();
 

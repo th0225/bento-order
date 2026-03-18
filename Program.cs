@@ -7,9 +7,13 @@ using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 讀取資料庫連線字串
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
 // Sqlite資料庫
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlite("Data Source=app.db"));
+    options.UseSqlite(connectionString));
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -29,6 +33,13 @@ builder.Services.AddSingleton<LineNotifyService>();
 builder.Services.AddHostedService<OrderReportService>();
 
 var app = builder.Build();
+
+// 更新資料庫
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate(); 
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

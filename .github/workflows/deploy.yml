@@ -1,56 +1,54 @@
-name: Deploy to GCP
+name: Deploy Bento System to GCP
 
 on:
   push:
-    branches: [ "main" ] # 當 main 分支有 push 時觸發
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+    - name: 檢出程式碼
+      uses: actions/checkout@v4
 
-    # 1. 設定 .NET 環境
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+    - name: 設定 .NET 環境
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 10.0
+        dotnet-version: 8.0.x
 
-    # 2. 編譯專案
-    - name: Publish Project
+    - name: 發布專案
       run: dotnet publish -c Release -o ./publish
 
-    - name: 遠端前置處理 (停止服務並清理權限)
+    - name: 遠端停止服務並清理 (避免權限與鎖定問題)
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.GCP_HOST }}
         username: ${{ secrets.GCP_USER }}
         key: ${{ secrets.GCP_SSH_KEY }}
         script: |
-          # 1. 先停止服務，釋放檔案鎖定
+          # 1. 停止服務釋放 DLL 鎖定
           sudo systemctl stop bento-order.service
-          # 2. 強制將目標資料夾改為當前使用者擁有，避免權限錯誤
+          # 2. 確保目標資料夾存在且權限正確
+          mkdir -p /home/excalibur0225/bento-order/publish
           sudo chown -R ${{ secrets.GCP_USER }}:${{ secrets.GCP_USER }} /home/excalibur0225/bento-order
-          # 3. 如果需要，可以清理舊檔案 (選用，但較乾淨)
-          # rm -rf /home/excalibur0225/bento-order/*
 
-    - name: 透過 SCP 傳送檔案到 GCP
+    - name: 傳送檔案 (SCP)
       uses: appleboy/scp-action@master
       with:
         host: ${{ secrets.GCP_HOST }}
         username: ${{ secrets.GCP_USER }}
         key: ${{ secrets.GCP_SSH_KEY }}
-        source: "./publish/*"
-        target: "/home/excalibur0225/publish/bento-order"
+        source: "publish/*"
+        target: "/home/excalibur0225/bento-order/publish"
         strip_components: 1
+        rm: true
 
-    - name: 遠端後置處理 (重啟服務)
+    - name: 啟動服務
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.GCP_HOST }}
         username: ${{ secrets.GCP_USER }}
         key: ${{ secrets.GCP_SSH_KEY }}
         script: |
-          # 確保權限沒跑掉並重新啟動
-          sudo chown -R ${{ secrets.GCP_USER }}:${{ secrets.GCP_USER }} /home/excalibur0225/bento-order
           sudo systemctl start bento-order.service

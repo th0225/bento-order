@@ -41,7 +41,7 @@ jobs:
         username: ${{ secrets.GCP_USER }}
         key: ${{ secrets.GCP_SSH_KEY }}
         source: "./publish/*"
-        target: "/home/excalibur0225/bento-order"
+        target: "/home/excalibur0225/publish/bento-order"
         strip_components: 1
 
     - name: 遠端後置處理 (重啟服務)

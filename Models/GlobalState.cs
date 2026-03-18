@@ -37,9 +37,6 @@ public class GlobalState
             {
                 var session = JsonSerializer.Deserialize<UserSession>(userJson);
 
-                Console.WriteLine($"[Debug] 現在時間: {DateTime.Now}");
-                Console.WriteLine($"[Debug] 過期時間: {CurrentUser?.Expiry}");
-
                 if (session != null && DateTime.Now < session.Expiry)
                 {
                     CurrentUser = session;
@@ -49,15 +46,19 @@ public class GlobalState
                 {
                     await js.InvokeVoidAsync("localStorage.removeItem", "user");
                     CurrentUser = null;
-                    IsInitialized = false;
+                    IsInitialized = true;
                     return;
                 }
             }
             catch
             {
-                IsInitialized = false;
+                IsInitialized = true;
                 return;
             }
+        }
+        else
+        {
+            IsInitialized = true;
         }
 
         NotifyStateChanged();

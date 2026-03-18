@@ -7,59 +7,52 @@
 @inject IDialogService DialogService
 @inject IJSRuntime JS
 
-@if (!GlobalState.IsInitialized)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-}
-else
-{
-    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-        <MudText Typo="Typo.h5" GutterBottom="true">每日訂餐詳細管理</MudText>
-        <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
-            <MudDatePicker Label="選擇日期" Date="_selectedDate"
-                PickerVariant="PickerVariant.Dialog"
-                DateChanged="OnDateChanged"
-                Color="Color.Primary" />
-        </MudPaper>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h5" GutterBottom="true">每日訂餐詳細管理</MudText>
+    <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
+        <MudDatePicker Label="選擇日期" Date="_selectedDate"
+            PickerVariant="PickerVariant.Dialog"
+            DateChanged="OnDateChanged"
+            Color="Color.Primary" />
+    </MudPaper>
 
-        <MudTable Items="_userOrders" Hover Dense FixedHeader Height="600px"
-            Style="background-color: #f8f9fa;">
-            <HeaderContent>
-                <MudTh>姓名</MudTh>
-                <MudTh>狀態</MudTh>
-                <MudTh>餐點 1</MudTh>
-                <MudTh>餐點 2</MudTh>
-                <MudTh>操作</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="姓名">@context.Username</MudTd>
-                <MudTd DataLabel="狀態">
-                    @if (context.HasOrdered)
-                    {
-                        <MudChip T="string" Color="Color.Success"
-                            Size="Size.Small">
-                            已訂
-                        </MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Color="Color.Error"
-                            Size="Size.Small">
-                            未訂
-                        </MudChip>
-                    }
-                </MudTd>
-                <MudTd>@context.OrderData.BentoItem?.Name</MudTd>
-                <MudTd>@context.OrderData.AdditionalBentoItem?.Name</MudTd>
-                <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                        Color="Color.Primary"
-                        OnClick="@(() => EditUserOrder(context, context.UserId))" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudContainer>
-}
+    <MudTable Items="_userOrders" Hover Dense FixedHeader Height="600px"
+        Style="background-color: #f8f9fa;">
+        <HeaderContent>
+            <MudTh>姓名</MudTh>
+            <MudTh>狀態</MudTh>
+            <MudTh>餐點 1</MudTh>
+            <MudTh>餐點 2</MudTh>
+            <MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="姓名">@context.Username</MudTd>
+            <MudTd DataLabel="狀態">
+                @if (context.HasOrdered)
+                {
+                    <MudChip T="string" Color="Color.Success"
+                        Size="Size.Small">
+                        已訂
+                    </MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Error"
+                        Size="Size.Small">
+                        未訂
+                    </MudChip>
+                }
+            </MudTd>
+            <MudTd>@context.OrderData.BentoItem?.Name</MudTd>
+            <MudTd>@context.OrderData.AdditionalBentoItem?.Name</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                    Color="Color.Primary"
+                    OnClick="@(() => EditUserOrder(context, context.UserId))" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
 
 @code {
     private DateTime? _selectedDate = DateTime.Today;
@@ -69,25 +62,7 @@ else
     {
         await LoadData();
     }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // 確認是否初始化
-            await GlobalState.EnsureInitialized(JS);
-
-            if (GlobalState.CurrentUser == null || !GlobalState.IsAdmin)
-            {
-                Navigation.NavigateTo("/");
-            }
-            else
-            {
-                StateHasChanged();
-            }
-        }
-    }
-
+    
     private async Task OnDateChanged(DateTime? newDate)
     {
         _selectedDate = newDate;

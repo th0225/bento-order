@@ -10,105 +10,84 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-@if (!GlobalState.IsInitialized)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-}
-else
-{
-    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-        <MudText Typo="Typo.h5" GutterBottom="true">
-            使用者管理
-        </MudText>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h5" GutterBottom="true">
+        使用者管理
+    </MudText>
 
-        <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
-            <MudGrid>
-                <MudItem xs="12" sm="3">
-                    <MudTextField @bind-Value="_newUser.Username" Label="帳號"
-                        Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
+    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+        <MudGrid>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="_newUser.Username" Label="帳號"
+                    Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
 
-                <MudItem xs="12" sm="3">
-                    <MudTextField @bind-Value="_newUser.PasswordHash"
-                        Label="密碼" Variant="Variant.Outlined"
-                        Margin="Margin.Dense"
-                        InputType="@(_isShowPassword ?
-                            InputType.Text : InputType.Password)"
-                        Adornment="Adornment.End"
-                        AdornmentIcon="@(_isShowPassword ?
-                            Icons.Material.Filled.Visibility : 
-                            Icons.Material.Filled.VisibilityOff)"
-                        OnAdornmentClick="() => _isShowPassword = !_isShowPassword" />
-                </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="_newUser.PasswordHash"
+                    Label="密碼" Variant="Variant.Outlined"
+                    Margin="Margin.Dense"
+                    InputType="@(_isShowPassword ?
+                        InputType.Text : InputType.Password)"
+                    Adornment="Adornment.End"
+                    AdornmentIcon="@(_isShowPassword ?
+                        Icons.Material.Filled.Visibility : 
+                        Icons.Material.Filled.VisibilityOff)"
+                    OnAdornmentClick="() => _isShowPassword = !_isShowPassword" />
+            </MudItem>
 
-                <MudItem xs="12" sm="2">
-                    <MudTextField @bind-Value="_newUser.RealName" Label="姓名"
-                        Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudTextField @bind-Value="_newUser.RealName" Label="姓名"
+                    Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
 
-                <MudItem xs="12" sm="3">
-                    <MudSelect @bind-Value="_newUser.Role" Label="權限"
-                        Variant="Variant.Outlined" Margin="Margin.Dense">
-                        <MudSelectItem Value="@("User")">一般使用者</MudSelectItem>
-                        <MudSelectItem Value="@("Admin")">管理員</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect @bind-Value="_newUser.Role" Label="權限"
+                    Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@("User")">一般使用者</MudSelectItem>
+                    <MudSelectItem Value="@("Admin")">管理員</MudSelectItem>
+                </MudSelect>
+            </MudItem>
 
-                <MudItem xs="12" sm="1" Class="d-flex align-center">
-                    <MudIconButton Icon="@Icons.Material.Filled.Add"
-                        Color="Color.Primary" Variant=Variant.Filled
-                        OnClick="CreateUser" />
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
+            <MudItem xs="12" sm="1" Class="d-flex align-center">
+                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                    Color="Color.Primary" Variant=Variant.Filled
+                    OnClick="CreateUser" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-        <MudTable Items="_users" Hover="true" Elevation="1" Class="mt-4"
-            Style="background-color: #f8f9fa;">
-            <HeaderContent>
-                <MudTh>帳號</MudTh>
-                <MudTh>姓名</MudTh>
-                <MudTh>權限</MudTh>
-                <MudTh Style="text-align: right">操作</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="帳號">@context.Username</MudTd>
-                <MudTd DataLabel="姓名">@context.RealName</MudTd>
-                <MudTd DataLabel="權限">@context.Role</MudTd>
-                <MudTd DataLabel="操作" Style="text-align: right">
-                    @if (context.Role != "Admin")
-                    {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                            Color="Color.Error"
-                            OnClick="@(() => RemoveUser(context.Id))" />
-                    }
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudContainer>
-}
+    <MudTable Items="_users" Hover="true" Elevation="1" Class="mt-4"
+        Style="background-color: #f8f9fa;">
+        <HeaderContent>
+            <MudTh>帳號</MudTh>
+            <MudTh>姓名</MudTh>
+            <MudTh>權限</MudTh>
+            <MudTh Style="text-align: right">操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="帳號">@context.Username</MudTd>
+            <MudTd DataLabel="姓名">@context.RealName</MudTd>
+            <MudTd DataLabel="權限">@context.Role</MudTd>
+            <MudTd DataLabel="操作" Style="text-align: right">
+                @if (context.Role != "Admin")
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                        Color="Color.Error"
+                        OnClick="@(() => RemoveUser(context.Id))" />
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
 
 @code {
     private List<User> _users = new();
     private User _newUser = new() { Role = "User"};
     private bool _isShowPassword = false;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            // 確認是否初始化
-            await GlobalState.EnsureInitialized(JS);
-
-            if (GlobalState.CurrentUser == null || !GlobalState.IsAdmin)
-            {
-                Navigation.NavigateTo("/");
-            }
-            else
-            {
-                await LoadUsers();
-                StateHasChanged();
-            }
-        }
+        await LoadUsers();
     }
 
     // 讀取使用者

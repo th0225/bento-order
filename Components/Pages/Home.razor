@@ -8,78 +8,71 @@
 @inject IJSRuntime JS
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 pb-8">
-    @if (!GlobalState.IsInitialized)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudPaper Elevation="0" Class="pa-6 rounded-xl shadow-cream mb-6">
-            <div class="d-flex align-center">
-                <div class="month-display">
-                    <MudText Typo="Typo.h4" Style="font-weight: 800">
-                        @_currentDate.ToString("yyyy")
-                    </MudText>
-                    <MudText Typo="Typo.h5" Style="margin-top: -8px;">
-                        @_currentDate.ToString(
-                            "MMMM",
-                            CultureInfo.CreateSpecificCulture("zh-TW"))
-                    </MudText>
-                </div>
-
-                <MudSpacer />
-
-                <div class="nav-controls">
-                    <MudIconButton Color="Color.Inherit"
-                        Icon="@Icons.Material.Filled.ArrowBackIosNew"
-                        OnClick="PrevMonth" />
-                    <MudButton Variant="Variant.Text" OnClick="GoToToday"
-                        Style="font-weight: bold;">
-                        今天
-                    </MudButton>
-                    <MudIconButton Color="Color.Inherit"
-                        Icon="@Icons.Material.Filled.ArrowForwardIos"
-                        OnClick="NextMonth" />
-                </div>
-            </div>
-        </MudPaper>
-
-        <div class="calendar-wrapper">
-            <div class="calendar-grid mb-2">
-                @foreach (var day in _weekDays)
-                {
-                    <div class="weekday-header">@day</div>
-                }
+    <MudPaper Elevation="0" Class="pa-6 rounded-xl shadow-cream mb-6">
+        <div class="d-flex align-center">
+            <div class="month-display">
+                <MudText Typo="Typo.h4" Style="font-weight: 800">
+                    @_currentDate.ToString("yyyy")
+                </MudText>
+                <MudText Typo="Typo.h5" Style="margin-top: -8px;">
+                    @_currentDate.ToString(
+                        "MMMM",
+                        CultureInfo.CreateSpecificCulture("zh-TW"))
+                </MudText>
             </div>
 
-            <div class="calendar-grid">
-                @for (int i = 0; i < _emptyDaysBefore; i++)
-                {
-                    <div class="empty-cell" />
-                }
+            <MudSpacer />
 
-                @for (int d = 1; d <= _daysInMonth; d++)
-                {
-                    var date = new DateTime(
-                        _currentDate.Year, _currentDate.Month, d
-                    );
-                    
-                    Order? order = orders?.SingleOrDefault(
-                        o => o.OrderDate == date
-                    );
-
-                    if (order != null)
-                    {
-                        <CalendarCell Date="@date" Order="order"/>
-                    }
-                    else
-                    {
-                        <CalendarCell Date="@date" />
-                    }
-                }
+            <div class="nav-controls">
+                <MudIconButton Color="Color.Inherit"
+                    Icon="@Icons.Material.Filled.ArrowBackIosNew"
+                    OnClick="PrevMonth" />
+                <MudButton Variant="Variant.Text" OnClick="GoToToday"
+                    Style="font-weight: bold;">
+                    今天
+                </MudButton>
+                <MudIconButton Color="Color.Inherit"
+                    Icon="@Icons.Material.Filled.ArrowForwardIos"
+                    OnClick="NextMonth" />
             </div>
         </div>
-    }
+    </MudPaper>
+
+    <div class="calendar-wrapper">
+        <div class="calendar-grid mb-2">
+            @foreach (var day in _weekDays)
+            {
+                <div class="weekday-header">@day</div>
+            }
+        </div>
+
+        <div class="calendar-grid">
+            @for (int i = 0; i < _emptyDaysBefore; i++)
+            {
+                <div class="empty-cell" />
+            }
+
+            @for (int d = 1; d <= _daysInMonth; d++)
+            {
+                var date = new DateTime(
+                    _currentDate.Year, _currentDate.Month, d
+                );
+                
+                Order? order = orders?.SingleOrDefault(
+                    o => o.OrderDate == date
+                );
+
+                if (order != null)
+                {
+                    <CalendarCell Date="@date" Order="order"/>
+                }
+                else
+                {
+                    <CalendarCell Date="@date" />
+                }
+            }
+        </div>
+    </div>
 </MudContainer>
 
 <style>

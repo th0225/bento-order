@@ -8,60 +8,53 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
-@if (!GlobalState.IsInitialized)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-}
-else
-{
-    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-        <MudText Typo="Typo.h5" GutterBottom="true">
-            系統設定
-        </MudText>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h5" GutterBottom="true">
+        系統設定
+    </MudText>
 
-        <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
-            <MudTextField @bind-Value="@GlobalState.LineAccessToken"
-                Label="LINE Access Token" Variant="Variant.Outlined"
-                Margin="Margin.Dense"
-                InputType="@(_isShowLineAccessToken ? 
-                    InputType.Text : InputType.Password)"
-                Adornment="Adornment.End"
-                AdornmentIcon="@(_isShowLineAccessToken ?
-                    Icons.Material.Filled.Visibility : 
-                    Icons.Material.Filled.VisibilityOff)"
-                OnAdornmentClick="() => _isShowLineAccessToken = 
-                    !_isShowLineAccessToken" />
+    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+        <MudTextField @bind-Value="@GlobalState.LineAccessToken"
+            Label="LINE Access Token" Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+            InputType="@(_isShowLineAccessToken ? 
+                InputType.Text : InputType.Password)"
+            Adornment="Adornment.End"
+            AdornmentIcon="@(_isShowLineAccessToken ?
+                Icons.Material.Filled.Visibility : 
+                Icons.Material.Filled.VisibilityOff)"
+            OnAdornmentClick="() => _isShowLineAccessToken = 
+                !_isShowLineAccessToken" />
 
-            <MudTextField @bind-Value="@GlobalState.LineId" Class="mt-4"
-                Label="LINE 群組/聊天室 ID" Variant="Variant.Outlined"
-                Margin="Margin.Dense"
-                InputType="@(_isShowLineId ? InputType.Text : InputType.Password)"
-                Adornment="Adornment.End"
-                AdornmentIcon="@(_isShowLineId ?
-                    Icons.Material.Filled.Visibility : 
-                    Icons.Material.Filled.VisibilityOff)"
-                OnAdornmentClick="() => _isShowLineId = !_isShowLineId" />
-            
-            <MudGrid Class="mt-4">
-                <MudItem xs="12" sm="3">
-                    <MudButton Color="Color.Primary" Variant="Variant.Filled"
-                        OnClick="SaveConfigAsync">
-                        儲存設定
-                    </MudButton>
-                </MudItem>
+        <MudTextField @bind-Value="@GlobalState.LineId" Class="mt-4"
+            Label="LINE 群組/聊天室 ID" Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+            InputType="@(_isShowLineId ? InputType.Text : InputType.Password)"
+            Adornment="Adornment.End"
+            AdornmentIcon="@(_isShowLineId ?
+                Icons.Material.Filled.Visibility : 
+                Icons.Material.Filled.VisibilityOff)"
+            OnAdornmentClick="() => _isShowLineId = !_isShowLineId" />
+        
+        <MudGrid Class="mt-4">
+            <MudItem xs="12" sm="3">
+                <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                    OnClick="SaveConfigAsync">
+                    儲存設定
+                </MudButton>
+            </MudItem>
 
-                <MudItem xs="12" sm="4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Info"
-                        OnClick="SendTestLineMessage" FullWidth
-                        StartIcon="@Icons.Material.Filled.NotificationAdd">
-                        手動發送Line統計
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Info"
+                    OnClick="SendTestLineMessage" FullWidth
+                    StartIcon="@Icons.Material.Filled.NotificationAdd">
+                    手動發送Line統計
+                </MudButton>
+            </MudItem>
+        </MudGrid>
 
-        </MudPaper>
-    </MudContainer>
-}
+    </MudPaper>
+</MudContainer>
 
 @code {
     private bool _isShowLineAccessToken = false;
@@ -71,25 +64,6 @@ else
     {
         await base.OnInitializedAsync();
         await LoadConfigAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // 確認是否初始化
-            await GlobalState.EnsureInitialized(JS);
-
-            if (GlobalState.CurrentUser == null || !GlobalState.IsAdmin)
-            {
-                Navigation.NavigateTo("/");
-            }
-            else
-            {
-                await LoadConfigAsync();
-                StateHasChanged();
-            }
-        }
     }
 
     private async Task SaveConfigAsync()

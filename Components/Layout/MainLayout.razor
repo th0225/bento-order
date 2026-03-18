@@ -17,48 +17,61 @@
 <MudDialogProvider />
 
 <MudLayout>
-    @if (GlobalState.CurrentUser != null)
+    @if (!GlobalState.IsInitialized)
     {
-        <MudAppBar Elevation="0" Color="Color.Inherit" Class="main-appbar">
-            <MudText Typo="Typo.h6" Class="ml-3"
-                Style="color: #4E342E; font-weight: 800;">
-                bento order
+        <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-16 text-center">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4">
+                正在載入資料...
             </MudText>
-            <MudSpacer />
-            <MudText Typo="Typo.body2" Class="mr-4"
-                Style="color: #4E342E; font-weight: 800;">
-                @GlobalState.CurrentUser.Username
-            </MudText>
-            <MudText Typo="Typo.body2" Class="mr-4"
-                Style="color: #4E342E; font-weight: 800;">
-                @GlobalState.CurrentUser.Realname
-            </MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
-                OnClick="HandleLogout"
-                Style="color: #4E342E; font-weight: 800;"
-                StartIcon="@Icons.Material.Filled.Logout">
-                登出
-            </MudButton>
-            <MudIconButton
-                Icon="@(GlobalState.IsDarkMode ? Icons.Material.Filled.LightMode :
-                    Icons.Material.Filled.DarkMode)"
-                Color="Color.Inherit" hidden
-                OnClick="@ToggleDarkMode" />
-        </MudAppBar>
-
-        @if (GlobalState.IsAdmin)
-        {
-            <MudDrawer Open="true" Variant="DrawerVariant.Persistent"
-                Elevation="0" ClipMode="DrawerClipMode.Always"
-                Style="width: 180px;">
-                <NavMenu />
-            </MudDrawer>
-        }
+        </MudContainer>
     }
+    else
+    {
+        @if (GlobalState.CurrentUser != null)
+        {
+            <MudAppBar Elevation="0" Color="Color.Inherit"
+                Class="main-appbar">
+                <MudText Typo="Typo.h6" Class="ml-3"
+                    Style="color: #4E342E; font-weight: 800;">
+                    bento order
+                </MudText>
+                <MudSpacer />
+                <MudText Typo="Typo.body2" Class="mr-4"
+                    Style="color: #4E342E; font-weight: 800;">
+                    @GlobalState.CurrentUser.Username
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mr-4"
+                    Style="color: #4E342E; font-weight: 800;">
+                    @GlobalState.CurrentUser.Realname
+                </MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
+                    OnClick="HandleLogout"
+                    Style="color: #4E342E; font-weight: 800;"
+                    StartIcon="@Icons.Material.Filled.Logout">
+                    登出
+                </MudButton>
+                <MudIconButton
+                    Icon="@(GlobalState.IsDarkMode ?
+                        Icons.Material.Filled.LightMode :
+                        Icons.Material.Filled.DarkMode)"
+                    Color="Color.Inherit" hidden
+                    OnClick="@ToggleDarkMode" />
+            </MudAppBar>
 
-    <MudMainContent>
-        @Body
-    </MudMainContent>
+            @if (GlobalState.IsAdmin)
+            {
+                <MudDrawer Open="true" Variant="DrawerVariant.Persistent"
+                    Elevation="0" ClipMode="DrawerClipMode.Always"
+                    Style="width: 180px;">
+                    <NavMenu />
+                </MudDrawer>
+            }
+        }
+        <MudMainContent>
+            @Body
+        </MudMainContent>
+    }
 </MudLayout>
 
 @code {
@@ -70,10 +83,10 @@
             AppbarBackground = "#F7F3EE",
             AppbarText = "#4E342E",
             Background = "#F7F3EE",
-            
+
             Primary = "#FF9800",
             Secondary = "#8D6E63",
-            
+
             DrawerBackground = "#FFFEFA",
             DrawerText = "#4E342E",
             DrawerIcon = "#FF9800",
@@ -105,21 +118,32 @@
         GlobalState.OnChange += StateHasChanged;
     }
 
-    // 離開頁面
-    public void Dispose()
-    {
-        GlobalState.OnChange -= StateHasChanged;
-    }
-
-    // 頁面渲染完成後，從local storage取得資料
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             // 確認是否初始化
             await GlobalState.EnsureInitialized(JS);
+
+            // 取得相對路徑 (不含域名)
+            var currentUrl =
+                Navigation.ToBaseRelativePath(Navigation.Uri);
+            
+            // 沒登錄且不在首頁
+            if (GlobalState.CurrentUser == null &&
+                !string.IsNullOrEmpty(currentUrl))
+            {
+                Navigation.NavigateTo("/");
+            }
+
             StateHasChanged();
         }
+    }
+
+    // 離開頁面
+    public void Dispose()
+    {
+        GlobalState.OnChange -= StateHasChanged;
     }
 
     // 切換深色模式

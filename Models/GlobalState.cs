@@ -30,21 +30,36 @@ public class GlobalState
         var userJson = await js.InvokeAsync<string>(
             "localStorage.getItem", "user"
         );
+
         if (!string.IsNullOrEmpty(userJson))
         {
-            CurrentUser = JsonSerializer.Deserialize<UserSession>(userJson);
+            try
+            {
+                var session = JsonSerializer.Deserialize<UserSession>(userJson);
+
+                Console.WriteLine($"[Debug] 現在時間: {DateTime.Now}");
+                Console.WriteLine($"[Debug] 過期時間: {CurrentUser?.Expiry}");
+
+                if (session != null && DateTime.Now < session.Expiry)
+                {
+                    CurrentUser = session;
+                    IsInitialized = true;
+                }
+                else
+                {
+                    await js.InvokeVoidAsync("localStorage.removeItem", "user");
+                    CurrentUser = null;
+                    IsInitialized = false;
+                    return;
+                }
+            }
+            catch
+            {
+                IsInitialized = false;
+                return;
+            }
         }
 
-        // 讀取主題
-        var savedThemeMode = await js.InvokeAsync<string>(
-            "localStorage.getItem", "darkMode"
-        );
-        if (bool.TryParse(savedThemeMode, out bool isDark))
-        {
-            IsDarkMode = isDark;
-        }
-
-        IsInitialized = true;
         NotifyStateChanged();
     }
 

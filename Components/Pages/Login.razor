@@ -58,7 +58,8 @@
                 Id = user.Id,
                 Username = user.Username,
                 Realname = user.RealName,
-                Role = user.Role
+                Role = user.Role,
+                Expiry = DateTime.Now.AddDays(7)
             };
             string userJson = JsonSerializer.Serialize(userSession);
             await JS.InvokeVoidAsync(

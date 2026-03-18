@@ -133,20 +133,17 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            // 確認是否初始化
-            await GlobalState.EnsureInitialized(JS);
+        // 確認是否初始化
+        await GlobalState.EnsureInitialized(JS);
 
-            if (GlobalState.CurrentUser == null)
-            {
-                Navigation.NavigateTo("/");
-            }
-            else
-            {
-                await LoadMonthDataAsync();
-                StateHasChanged();
-            }
+        if (GlobalState.CurrentUser == null)
+        {
+            Navigation.NavigateTo("/");
+        }
+        else if (firstRender)
+        {
+            await LoadMonthDataAsync();
+            StateHasChanged();
         }
     }
 

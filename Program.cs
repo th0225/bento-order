@@ -25,8 +25,6 @@ builder.Services.AddScoped<GlobalState>();
 builder.Services.AddScoped<BentoDbService>();
 // 餐點統計並Line通知
 builder.Services.AddScoped<BentoReportService>();
-// Line訊息功能
-builder.Services.AddScoped<LineNotifyService>();
 
 // 餐點資料
 builder.Services.AddSingleton<IMealProvider, MealProvider>();

@@ -16,9 +16,7 @@ public class GlobalState
     public event Action? OnChange;
     // 頁面是否已初始化
     public bool IsInitialized { get; private set; }
-    public string? LineId { get; set; } = string.Empty;
-    public string? LineAccessToken { get; set; } = string.Empty;
-
+    
     public async Task EnsureInitialized(IJSRuntime js)
     {
         if (IsInitialized)

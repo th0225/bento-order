@@ -1,46 +1,27 @@
-using bento_order.Data;
-using Microsoft.EntityFrameworkCore;
+using bento_order.Models;
+using bento_order.Services;
+using Line.Messaging;
 
 public class BentoReportService
 {
-    private readonly AppDbContext _db;
-    private readonly LineNotifyService _lineService;
+    private readonly BentoDbService _bentoDbService;
 
-    public BentoReportService(AppDbContext db, LineNotifyService lineService)
+    public BentoReportService(BentoDbService bentoDbService)
     {
-        _db = db;
-        _lineService = lineService;
+        _bentoDbService = bentoDbService;
     }
 
     public async Task ProcessAndSendReportAsync()
     {
         var today = DateTime.Today;
 
-        var orders = await _db.Orders
-            .Where(o => o.OrderDate == today)
-            .Select(o => new
-            {
-                Main = o.BentoItem!.Name,
-                Extra = o.AdditionalBentoItem!.Name
-            }).ToListAsync();
-
-        var allBentos = orders
-            .Select(o => o.Main)
-            .Concat(orders.Select(o => o.Extra))
-            .Where(name => !string.IsNullOrEmpty(name))
-            .ToList();
-
-        var orderStats = allBentos
-            .GroupBy(name => name)
-            .Select(g => new { Name = g.Key, Count = g.Count() })
-            .OrderByDescending(x => x.Count)
-            .ToList();
+        var orderStats = await _bentoDbService.GetDailyStatsAsync(today);
 
         string messageContent = string.Empty;
         if (orderStats.Any())
         {
             messageContent = string.Join(", ", orderStats.Select(
-                s => $"{s.Name}x{s.Count}"
+                s => $"{s.MealName}x{s.Count}"
             ));
         }
         else
@@ -54,6 +35,15 @@ public class BentoReportService
                            $"----------------\n" +
                            $"總計: {total} 份";
 
-        await _lineService.SendOrderSummaryAsync(finalMessage);
+        List<SystemConfig> configs = await _bentoDbService.GetConfigAsync();
+        string lineId = configs.FirstOrDefault(
+            c => c.Key == "LineId"
+        )?.Value ?? string.Empty;
+        string lineAccessToken = configs.FirstOrDefault(
+            c => c.Key == "LineAccessToken"
+        )?.Value ?? string.Empty;
+
+        var client = new LineMessagingClient(lineAccessToken);
+        await client.PushMessageAsync(lineId, finalMessage);
     }
 }

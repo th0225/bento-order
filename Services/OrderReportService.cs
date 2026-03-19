@@ -23,7 +23,7 @@ public class OrderReportService : BackgroundService
             }
 
             var delay = targetTime - now;
-            // Console.WriteLine($"[Bento] 下次發送時間：{targetTime}，等待 {delay.TotalHours:F2} 小時");
+            Console.WriteLine($"[Bento] 下次發送時間：{targetTime}，等待 {delay.TotalHours:F2} 小時");
             await Task.Delay(delay, stoppingToken);
 
             using (var scope = _serviceProvider.CreateScope())

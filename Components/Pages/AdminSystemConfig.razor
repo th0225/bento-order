@@ -14,7 +14,7 @@
     </MudText>
 
     <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
-        <MudTextField @bind-Value="@GlobalState.LineAccessToken"
+        <MudTextField @bind-Value="@_lineAccessToken"
             Label="LINE Access Token" Variant="Variant.Outlined"
             Margin="Margin.Dense"
             InputType="@(_isShowLineAccessToken ? 
@@ -26,7 +26,7 @@
             OnAdornmentClick="() => _isShowLineAccessToken = 
                 !_isShowLineAccessToken" />
 
-        <MudTextField @bind-Value="@GlobalState.LineId" Class="mt-4"
+        <MudTextField @bind-Value="@_lineId" Class="mt-4"
             Label="LINE 群組/聊天室 ID" Variant="Variant.Outlined"
             Margin="Margin.Dense"
             InputType="@(_isShowLineId ? InputType.Text : InputType.Password)"
@@ -59,6 +59,8 @@
 @code {
     private bool _isShowLineAccessToken = false;
     private bool _isShowLineId = false;
+    private string? _lineAccessToken = string.Empty;
+    private string? _lineId = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,13 +75,13 @@
             SystemConfig lineId = new()
             {
                 Key = "LineId",
-                Value = GlobalState.LineId ?? string.Empty
+                Value = _lineId ?? string.Empty
             };
 
             SystemConfig lineAccessToken = new()
             {
                 Key = "LineAccessToken",
-                Value = GlobalState.LineAccessToken ?? string.Empty
+                Value = _lineAccessToken ?? string.Empty
             };
 
             await BentoDbService.SaveConfigAsync(lineId);
@@ -99,11 +101,11 @@
 
         if (configs != null && configs.Any())
         {
-            GlobalState.LineAccessToken = configs.FirstOrDefault(
+            _lineAccessToken = configs.FirstOrDefault(
                 c => c.Key == "LineAccessToken"
             )?.Value ?? string.Empty;
 
-            GlobalState.LineId = configs.FirstOrDefault(
+            _lineId = configs.FirstOrDefault(
                 c => c.Key == "LineId"
             )?.Value ?? string.Empty;
         }

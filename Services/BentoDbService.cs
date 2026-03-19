@@ -146,6 +146,7 @@ public class BentoDbService
                 o.UserId == userId).ToListAsync();
     }
 
+    // 取得每日各項餐點統計(A餐x1, B餐x2,...)
     public async Task<List<OrderCount>> GetDailyStatsAsync(DateTime date)
     {
         using var db = _dbFactory.CreateDbContext();

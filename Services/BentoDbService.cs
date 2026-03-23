@@ -238,15 +238,11 @@ public class BentoDbService
         
         if (_config == null)
         {
-            db.SystemConfig.Add(new SystemConfig
-            {
-                Key = config!.Key,
-                Value = config!.Value
-            });
+            db.SystemConfig.Add(config);
         }
         else
         {
-            _config = config;
+            _config.Value = config.Value;
         }
 
         await db.SaveChangesAsync();

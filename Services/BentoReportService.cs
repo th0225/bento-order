@@ -14,8 +14,18 @@ public class BentoReportService
     public async Task ProcessAndSendReportAsync()
     {
         var today = DateTime.Today;
+        DayOfWeek day = today.DayOfWeek;
 
         var orderStats = await _bentoDbService.GetDailyStatsAsync(today);
+
+        // 週末沒人訂餐則不發送訊息
+        if (day == DayOfWeek.Saturday || day == DayOfWeek.Sunday)
+        {
+            if (!orderStats.Any())
+            {
+                return;
+            }
+        }
 
         string messageContent = string.Empty;
         if (orderStats.Any())

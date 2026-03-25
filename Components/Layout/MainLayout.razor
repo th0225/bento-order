@@ -7,6 +7,7 @@
 @inject GlobalState GlobalState
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject IBrowserViewportService ViewportService
 
 @implements IDisposable
 
@@ -31,7 +32,8 @@
         @if (GlobalState.CurrentUser != null)
         {
             <MudAppBar Elevation="0" Color="Color.Inherit"
-                Class="main-appbar">
+                Class="main-appbar px-2">
+
                 <MudText Typo="Typo.h6" Class="ml-3"
                     Style="color: #4E342E; font-weight: 800;">
                     bento order
@@ -46,24 +48,24 @@
                     @GlobalState.CurrentUser.Realname
                 </MudText>
                 <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
+                    OnClick="ShowMenu" Class="mr-4"
+                    Style="color: #4E342E; font-weight: 800;"
+                    StartIcon="@Icons.Material.Filled.RestaurantMenu">
+                    菜單
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
                     OnClick="HandleLogout"
                     Style="color: #4E342E; font-weight: 800;"
                     StartIcon="@Icons.Material.Filled.Logout">
                     登出
-                </MudButton>
-                <MudIconButton
-                    Icon="@(GlobalState.IsDarkMode ?
-                        Icons.Material.Filled.LightMode :
-                        Icons.Material.Filled.DarkMode)"
-                    Color="Color.Inherit" hidden
-                    OnClick="@ToggleDarkMode" />
+                </MudButton>`
             </MudAppBar>
 
             @if (GlobalState.IsAdmin)
             {
                 <MudDrawer Open="true" Variant="DrawerVariant.Persistent"
                     Elevation="0" ClipMode="DrawerClipMode.Always"
-                    Style="width: 180px;">
+                    Width="180px">
                     <NavMenu />
                 </MudDrawer>
             }
@@ -75,6 +77,11 @@
 </MudLayout>
 
 @code {
+    private bool _drawerOpen = false;
+    private bool _isMobile;
+
+    void DrawerToggle() => _drawerOpen = !_drawerOpen;
+
     // 主題顏色配置
     private readonly MudTheme CustomTheme = new()
     {
@@ -146,15 +153,10 @@
         GlobalState.OnChange -= StateHasChanged;
     }
 
-    // 切換深色模式
-    private async Task ToggleDarkMode()
+    // 顯示菜單
+    private async Task ShowMenu()
     {
-        bool newMode = !GlobalState.IsDarkMode;
-        GlobalState.SetDarkMode(newMode);
-        await JS.InvokeVoidAsync(
-            "localStorage.setItem",
-            "darkMode", newMode.ToString()
-        );
+
     }
 
     // 使用者登出

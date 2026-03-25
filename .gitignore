@@ -27,3 +27,6 @@ appsettings.Production.json
 Thumbs.db
 node_modules/
 .npm/
+
+## 菜單圖片
+wwwroot/menu.jpg

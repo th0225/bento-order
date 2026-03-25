@@ -19,6 +19,55 @@
     <Routes @rendermode="InteractiveServer" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
+
+    <script>
+        window.compressImage = async (streamReference, maxWidth, maxHeight, quality) => {
+            try {
+                // 修正點：Blazor 的 streamReference 需要這樣讀取成 ArrayBuffer
+                const arrayBuffer = await streamReference.arrayBuffer();
+                const blob = new Blob([arrayBuffer]);
+                const url = URL.createObjectURL(blob);
+                
+                const image = new Image();
+                image.src = url;
+                
+                await new Promise((resolve, reject) => {
+                    image.onload = resolve;
+                    image.onerror = () => reject(new Error("圖片載入失敗，格式可能有誤"));
+                });
+                
+                URL.revokeObjectURL(url);
+
+                let width = image.width;
+                let height = image.height;
+                
+                // 縮放邏輯
+                if (width > height) {
+                    if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                } else {
+                    if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(image, 0, 0, width, height);
+
+                // 將結果轉回 byte[] 傳給 C#
+                return new Promise((resolve) => {
+                    canvas.toBlob((resultBlob) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(new Uint8Array(reader.result));
+                        reader.readAsArrayBuffer(resultBlob);
+                    }, 'image/jpeg', quality);
+                });
+            } catch (e) {
+                console.error("JS 壓縮發生錯誤:", e);
+                throw e;
+            }
+        };
+    </script>
 </body>
 
 </html>

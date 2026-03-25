@@ -1,0 +1,152 @@
+@page "/admin/menu-manager"
+@using bento_order.Services
+
+@inject MenuUploadService MenuUploadService
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
+    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+        
+        @if (_previewUrl == null)
+        {
+            <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles"
+                Accept=".jpg,.jpeg">
+                <CustomContent>
+                    <MudButton Variant="Variant.Filled"
+                        Color="Color.Primary" HtmlTag="label"
+                        StartIcon="@Icons.Material.Filled.PhotoCamera"
+                        OnClick="@context.OpenFilePickerAsync"
+                        Class="px-8 py-3"
+                        Style="border-radius: 25px;
+                            background-color: #795548;">
+                        選擇照片
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate />
+            </MudFileUpload>
+        }
+        else
+        {
+            <div class="relative w-100">
+                <MudImage Src="@_previewUrl"
+                    Alt="菜單預覽" Elevation="2"
+                    Class="rounded-lg"
+                    Style="max-width: 100%; max-height: 400px;
+                        object-fit: contain;" />
+                <MudIconButton Icon="@Icons.Material.Filled.Cancel"
+                    Color="Color.Error"
+                    OnClick="ClearPreview"
+                    Class="absolute"
+                    Style="top: -10px; right: -10px;
+                        background-color: white;" />
+            </div>
+        }
+    </MudPaper>
+
+    @if (_previewUrl != null)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth
+            Size="Size.Large" OnClick="SaveMenuImage"
+            Disabled="@_isUploading"
+            Style="border-radius: 12px; height: 56px; font-weight: 800;">
+            @if (_isUploading)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small"
+                    Indeterminate="true" />
+                <MudText Class="ms-2">正在上傳...</MudText>
+            }
+            else
+            {
+                <MudText>確認上傳</MudText>
+            }
+        </MudButton>
+    }
+</MudContainer>
+
+<style>
+    .relative { position: relative; }
+    .absolute { position: absolute; }
+    .w-100 { width: 100%; }
+</style>
+
+@code {
+    // 圖片預覽網址
+    private string? _previewUrl;
+    // 是否正在上傳
+    private bool _isUploading = false;
+    // 壓縮後的圖檔
+    private byte[]? _compressedData;
+
+    // 上傳檔案至串流
+    private async Task UploadFiles(IBrowserFile file)
+    {
+        try
+        {
+            // 開啟串流
+            var stream = file.OpenReadStream(
+                maxAllowedSize: 1024 * 1024 * 15);
+            
+            // 封裝JS可讀取的參考
+            using var streamRef =
+                new DotNetStreamReference(stream);
+
+            // 呼叫JS進行手機端運算
+            var result = await JS.InvokeAsync<byte[]>(
+                "compressImage",
+                streamRef,
+                1200, 1200, 0.7);
+
+            if (result != null && result.Length > 0)
+            {
+                _compressedData = result;
+                _previewUrl =
+                    $"data:image/jpeg;base64,{Convert.ToBase64String(
+                        _compressedData
+                    )}";
+                await InvokeAsync(StateHasChanged);
+
+                Snackbar.Add("上傳成功", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"預覽失敗: {ex.Message}", Severity.Error);
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    // 清除預覽圖
+    private void ClearPreview()
+    {
+        _previewUrl = null;
+        _compressedData = null;
+    }
+
+    // 儲存菜單圖片
+    private async Task SaveMenuImage()
+    {
+        if (_compressedData == null)
+        {
+            return;
+        }
+
+        _isUploading = true;
+        try
+        {
+            using var ms = new MemoryStream(_compressedData!);
+            await MenuUploadService.UploadMenuAsync(ms, "menu.jpg");
+
+            Snackbar.Add("菜單上傳成功", Severity.Success);
+            ClearPreview();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"上傳失敗: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+}

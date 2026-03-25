@@ -25,11 +25,18 @@ builder.Services.AddScoped<GlobalState>();
 builder.Services.AddScoped<BentoDbService>();
 // 餐點統計並Line通知
 builder.Services.AddScoped<BentoReportService>();
+// 菜單上傳
+builder.Services.AddScoped<MenuUploadService>();
 
 // 餐點資料
 builder.Services.AddSingleton<IMealProvider, MealProvider>();
 
 builder.Services.AddHostedService<OrderReportService>();
+
+builder.Services.AddServerSideBlazor().AddHubOptions(options =>
+{
+    options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
+});
 
 var app = builder.Build();
 

@@ -8,11 +8,7 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-    <MudText Typo="Typo.h5" GutterBottom="true">
-        系統設定
-    </MudText>
-
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
     <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
         <MudTextField @bind-Value="@_lineAccessToken"
             Label="LINE Access Token" Variant="Variant.Outlined"

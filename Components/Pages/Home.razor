@@ -64,11 +64,11 @@
 
                 if (order != null)
                 {
-                    <CalendarCell Date="@date" Order="order"/>
+                    <CalendarCell @key="date" Date="@date" Order="order"/>
                 }
                 else
                 {
-                    <CalendarCell Date="@date" />
+                    <CalendarCell @key="date" Date="@date" />
                 }
             }
         </div>
@@ -151,6 +151,7 @@
     // 上個月
     private async Task PrevMonth()
     {
+        orders = new();
         _currentDate = _currentDate.AddMonths(-1);
         await LoadMonthDataAsync();
     }
@@ -158,6 +159,7 @@
     // 下個月
     private async Task NextMonth()
     {
+        orders = new();
         _currentDate = _currentDate.AddMonths(1);
         await LoadMonthDataAsync();
     }
@@ -165,6 +167,7 @@
     // 這個月
     private async Task GoToToday()
     {
+        orders = new();
         _currentDate = DateTime.Today;
         await LoadMonthDataAsync();
     }

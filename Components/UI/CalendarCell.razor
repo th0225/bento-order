@@ -176,7 +176,7 @@
     [Parameter]
     public Order? Order { get; set; } = new();
 
-    private Order _newOrder = new();
+    private Order _internalOrder = new();
     private CancellationTokenSource? _cts;
     private bool IsToday => Date.Date == DateTime.Today;
     private bool IsWeekend => 
@@ -223,6 +223,41 @@
         }
     }
 
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (Order != null)
+        {
+            _internalOrder = new()
+            {
+                Id = Order.Id,
+                UserId = Order.UserId,
+                OrderDate = Date,
+                BentoItem = Order.BentoItem ?? new() {
+                    Name = string.Empty, Option = "正"
+                },
+                AdditionalBentoItem = Order.AdditionalBentoItem ??
+                    new () {
+                    Name = string.Empty, Option = "正"
+                }
+            };
+        }
+        else
+        {
+            _internalOrder = new()
+            {
+                OrderDate = Date,
+                BentoItem = new () {
+                    Name = string.Empty, Option = "正"
+                },
+                AdditionalBentoItem = new() {
+                    Name = string.Empty, Option = "正"
+                }
+            };
+        }
+    }
+
     // 循環按鈕
     private async Task CycleRiceOptions(string target)
     {
@@ -254,28 +289,21 @@
 
     private async Task OnMealChanged(string value, string type)
     {
-        if (GlobalState.IsAdmin)
-        {
-            _newOrder.UserId = GlobalState.FakeId;
-        }
-        else
-        {
-            _newOrder.UserId = GlobalState.CurrentUser!.Id;
-        }
-        _newOrder.OrderDate = Date;
+        _internalOrder.UserId = GlobalState.IsAdmin ? 
+            GlobalState.FakeId : GlobalState.CurrentUser!.Id;
+        _internalOrder.OrderDate = Date;
 
-        BentoItem bentoItem = new();
         if (type == "normal")
         {
-            bentoItem!.Name = value;
-            bentoItem!.Option = _riceOptions[_riceOptionsIndex[0]];
-            _newOrder.BentoItem = bentoItem;
+            _internalOrder.BentoItem!.Name = value;
+            _internalOrder.BentoItem!.Option =
+                _riceOptions[_riceOptionsIndex[0]];
         }
         else
         {
-            bentoItem!.Name = value;
-            bentoItem!.Option = _riceOptions[_riceOptionsIndex[1]];
-            _newOrder.AdditionalBentoItem = bentoItem;
+            _internalOrder.BentoItem!.Name = value;
+            _internalOrder.BentoItem!.Option =
+                _riceOptions[_riceOptionsIndex[1]];
         }
 
         await TriggerAutoSave();
@@ -290,7 +318,7 @@
         {
             await Task.Delay(500, _cts.Token);
             await BentoDbService.UpsertOrderAsync(
-                _newOrder, GlobalState.IsAdmin);
+                _internalOrder, GlobalState.IsAdmin);
 
             Snackbar.Add("資料已同步", Severity.Info);
 

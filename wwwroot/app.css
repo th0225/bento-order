@@ -23,6 +23,21 @@ body {
     background-color: #FFF9F2 !important;
 }
 
+/* 標題強化 */
+.login-title {
+    font-weight: 700 !important;
+    color: #37474F !important;
+    letter-spacing: 0.5px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 24px !important; /* 加大圓角提升現代感 */
+    padding: 40px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
 /* ============================================================
    2. 佈局元件 (AppBar & Drawer)
    ============================================================ */

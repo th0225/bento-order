@@ -14,29 +14,41 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraSmall" Style="height: 80vh;"
     Class="d-flex align-center justify-center">
-    <MudPaper Elevation="4" Class="pa-8" Style="width: 100%; ">
-        <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">
-            Bento Order System
-        </MudText>
-        
-        <MudTextField @bind-Value="_username" Label="使用者帳號"
-            Variant="Variant.Outlined" Class="mt-4" />
-        <MudTextField @bind-Value="_password" Label="密碼"
-            Variant="Variant.Outlined" InputType="InputType.Password"
-            Class="mt-4" />
+    <MudPaper Elevation="4" Class="login-card">
+        <MudForm OnEnterPressed="@(() => HandleLogin())">
 
-        @if (!string.IsNullOrEmpty(_errorMessage))
-        {
-            <MudAlert Severity="Severity.Error" Class="mt-4">
-                @_errorMessage
-            </MudAlert>
-        }
+            <div class="d-flex flex-column align-center mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Restaurant" 
+                        Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                <MudText Typo="Typo.h5" Align="Align.Center"
+                    GutterBottom="true" Class="longin-title">
+                    Bento Order System
+                </MudText>
+            </div>
+            
+            <MudTextField @bind-Value="_username" Label="使用者帳號"
+                Variant="Variant.Outlined" Class="mt-4"
+                Immediate />
+            <MudTextField @bind-Value="_password" Label="密碼"
+                Variant="Variant.Outlined" InputType="@_passwordInput"
+                Class="mt-4" Adornment="Adornment.End"
+                Immediate AdornmentIcon="@_passwordInputIcon"
+                OnAdornmentClick="TogglePasswordVisibility" />
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-            FullWidth="true" Size="Size.Large" Class="mt-6"
-            OnClick="HandleLogin">
-            登入
-        </MudButton>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                FullWidth="true" Size="Size.Large"
+                Class="mt-6 py-3 rounded-lg"
+                ButtonType="ButtonType.Submit" OnClick="HandleLogin">
+                登入
+            </MudButton>
+        </MudForm>
     </MudPaper>
 </MudContainer>
 
@@ -44,6 +56,11 @@
     private string _username = "";
     private string _password = "";
     private string _errorMessage = "";
+
+    // 密碼可見性切換
+    private bool _isShowPassword;
+    private InputType _passwordInput = InputType.Password;
+    private string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
 
     // 登錄系統
     private async Task HandleLogin()
@@ -108,6 +125,23 @@
                     Navigation.NavigateTo("/home");
                 }
             }
+        }
+    }
+
+    // 切換密碼是否可見
+    void TogglePasswordVisibility()
+    {
+        if (_isShowPassword)
+        {
+            _isShowPassword = false;
+            _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+            _passwordInput = InputType.Password;
+        }
+        else
+        {
+            _isShowPassword = true;
+            _passwordInputIcon = Icons.Material.Filled.Visibility;
+            _passwordInput = InputType.Text;
         }
     }
 }

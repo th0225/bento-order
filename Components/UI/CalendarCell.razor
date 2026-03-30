@@ -384,11 +384,20 @@
             return false;
         }
 
+        // 每日9點鎖定
         if (orderDate == today)
         {
             return now.Hour >= 9 && now.Minute >= 1;
         }
 
+        // 假日時鎖定
+        if (orderDate.DayOfWeek == DayOfWeek.Saturday || 
+            orderDate.DayOfWeek == DayOfWeek.Sunday)
+        {
+            return true;
+        }
+        
+        // 今天以前的日期鎖定
         if (orderDate < today)
         {
             return true;

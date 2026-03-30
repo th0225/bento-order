@@ -35,13 +35,20 @@
             <MudAppBar Elevation="0" Color="Color.Inherit"
                 Class="main-appbar px-2">
 
+                @if (GlobalState.IsAdmin)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                        Color="Color.Inherit" Edge="Edge.Start"
+                        OnClick="@((e) => DrawerToggle())" />
+                }
+
                 <MudText Typo="Typo.h6" Class="ml-3"
                     Style="color: #4E342E; font-weight: 800;">
                     bento order
                 </MudText>
 
                 <MudSpacer />
-                
+
                 @* 電腦版 *@
                 <div class="d-none d-md-flex align-center">
                     <MudText Typo="Typo.body2"
@@ -71,9 +78,16 @@
                 <div class="d-flex d-md-none align-center">
                     <MudAvatar Color="Color.Secondary" Class="pa-4 mr-4"
                         Size="Size.Small" Style="font-size: 0.75rem;">
-                        @(GlobalState.CurrentUser.Realname?.Substring(
-                            0, 1
-                        ) ?? "U")
+                        @if (string.IsNullOrEmpty(
+                            GlobalState.CurrentUser.Realname))
+                        {
+                            
+                        }
+                        else
+                        {
+                            @(GlobalState.CurrentUser.Realname?.Substring(
+                                0, 1) ?? "U")
+                        }
                     </MudAvatar>
 
                     <MudIconButton
@@ -90,9 +104,9 @@
 
             @if (GlobalState.IsAdmin)
             {
-                <MudDrawer Open="true" Variant="DrawerVariant.Persistent"
+                <MudDrawer Variant="DrawerVariant.Persistent"
                     Elevation="0" ClipMode="DrawerClipMode.Always"
-                    Width="180px">
+                    @bind-Open="_drawerOpen" Width="180px">
                     <NavMenu />
                 </MudDrawer>
             }
@@ -130,7 +144,6 @@
 
 @code {
     private bool _drawerOpen = false;
-    private bool _isMobile;
 
     void DrawerToggle() => _drawerOpen = !_drawerOpen;
 

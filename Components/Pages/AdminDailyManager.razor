@@ -42,9 +42,13 @@
                     </MudChip>
                 }
             </MudTd>
-            <MudTd>@context.OrderData.BentoItem?.Name</MudTd>
-            <MudTd>@context.OrderData.AdditionalBentoItem?.Name</MudTd>
-            <MudTd>
+            <MudTd DataLabel="餐點">
+                @context.OrderData.BentoItem?.Name
+            </MudTd>
+            <MudTd DataLabel="餐點">
+                @context.OrderData.AdditionalBentoItem?.Name
+            </MudTd>
+            <MudTd DataLabel="操作">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                     Color="Color.Primary"
                     OnClick="@(() => EditUserOrder(context, context.UserId))" />

@@ -73,6 +73,11 @@
             }
         </div>
     </div>
+
+    <MudScrollToTop>
+        <MudFab Color="Color.Secondary"
+            StartIcon="@Icons.Material.Filled.ArrowUpward" />
+    </MudScrollToTop>
 </MudContainer>
 
 <style>
@@ -103,10 +108,26 @@
         background: transparent;
     }
 
-    /* 針對手機端的簡易適應 */
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+    }
+
+    /* 手機模式適應 */
     @@media (max-width: 960px) {
+        .weekday-header {
+            display: none; /* 手機條列式不需要 SUN, MON 標頭 */
+        }
+
+        .empty-cell {
+            display: none; /* 條列式不需要補空白格子 */
+        }
+
         .calendar-grid {
-            gap: 6px;
+            display: flex;
+            flex-direction: column; /* 變更為垂直排列 */
+            gap: 8px;
         }
     }
 </style>

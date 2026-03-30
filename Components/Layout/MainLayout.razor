@@ -39,27 +39,53 @@
                     Style="color: #4E342E; font-weight: 800;">
                     bento order
                 </MudText>
+
                 <MudSpacer />
-                <MudText Typo="Typo.body2" Class="mr-4"
-                    Style="color: #4E342E; font-weight: 800;">
-                    @GlobalState.CurrentUser.Username
-                </MudText>
-                <MudText Typo="Typo.body2" Class="mr-4"
-                    Style="color: #4E342E; font-weight: 800;">
-                    @GlobalState.CurrentUser.Realname
-                </MudText>
-                <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
-                    OnClick="ShowMenu" Class="mr-4"
-                    Style="color: #4E342E; font-weight: 800;"
-                    StartIcon="@Icons.Material.Filled.RestaurantMenu">
-                    菜單
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Inherit"
-                    OnClick="HandleLogout"
-                    Style="color: #4E342E; font-weight: 800;"
-                    StartIcon="@Icons.Material.Filled.Logout">
-                    登出
-                </MudButton>
+                
+                @* 電腦版 *@
+                <div class="d-none d-md-flex align-center">
+                    <MudText Typo="Typo.body2"
+                        Class="mr-3 font-weight-bold"
+                        Style="color: #4E342E; font-weight: 800;">
+                        @GlobalState.CurrentUser.Realname
+                    </MudText>
+
+                    <MudButton Variant="Variant.Outlined"
+                        Color="Color.Inherit"
+                        OnClick="ShowMenu" Class="mr-4"
+                        Style="color: #4E342E; font-weight: 800;"
+                        StartIcon="@Icons.Material.Filled.RestaurantMenu">
+                        菜單
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined"
+                        Color="Color.Inherit"
+                        OnClick="HandleLogout"
+                        Style="color: #4E342E; font-weight: 800;"
+                        StartIcon="@Icons.Material.Filled.Logout">
+                        登出
+                    </MudButton>
+                </div>
+
+                @* 手機版 *@
+                <div class="d-flex d-md-none align-center">
+                    <MudAvatar Color="Color.Secondary"
+                        Size="Size.Small" Style="font-size: 0.75rem;">
+                        @(GlobalState.CurrentUser.Realname?.Substring(
+                            0, 1
+                        ) ?? "U")
+                    </MudAvatar>
+
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.RestaurantMenu"
+                        Color="Color.Inherit" OnClick="ShowMenu"
+                        Class="d-md-none" />
+
+                    <MudIconButton
+                        Icon="@Icons.Material.Filled.Logout"
+                        Color="Color.Inherit" OnClick="HandleLogout"
+                        Class="d-md-none" />
+                </div>
             </MudAppBar>
 
             @if (GlobalState.IsAdmin)
@@ -76,6 +102,31 @@
         </MudMainContent>
     }
 </MudLayout>
+
+<style>
+    /* 讓 AppBar 有點奶油色半透明質感 */
+    .main-appbar {
+        background-color: rgba(247, 243, 238, 0.9) !important;
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid #E0D7C6;
+    }
+
+    .font-weight-bold {
+        font-weight: 800;
+    }
+
+    /* 手機版按鈕微調 */
+    @@media (max-width: 600px) {
+        .mud-typography-h6 {
+            font-size: 1rem !important;
+        }
+        
+        /* 縮小手機版按鈕點擊區域，避免太擠 */
+        .mud-button-root {
+            padding: 4px 8px;
+        }
+    }
+</style>
 
 @code {
     private bool _drawerOpen = false;

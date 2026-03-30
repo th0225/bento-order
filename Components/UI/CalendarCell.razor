@@ -5,7 +5,8 @@
 @inject ISnackbar Snackbar
 @inject GlobalState GlobalState
 
-<div class="cell-wrapper @(IsLocked() ? "cell-locked" : IsWeekend ? "weekend" : "weekday") shadow-soft">
+<div class="cell-wrapper @(IsLocked() ? "cell-locked" : 
+    IsWeekend ? "weekend" : "weekday") shadow-soft">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
         @if (IsLocked())
@@ -143,8 +144,7 @@
     }
 
     .rest-mode { 
-        flex: 1; display: flex; flex-direction: column; 
-        align-items: center; justify-content: center; color: #BDBDBD; 
+        color: #BDBDBD; 
     }
 
     /* 隱藏 MudSelect 預設底線顏色，讓介面更乾淨 */
@@ -165,6 +165,51 @@
     .rice-cycle-btn:hover {
         background-color: #FFF3E0 !important;
         border-color: #FF9800 !important;
+    }
+
+    /* 針對手機模式的強力修正 */
+    @@media (max-width: 960px) {
+        /* 1. 確保 cell-body 是填滿的 */
+        .cell-body {
+            flex: 1 1 auto !important;
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-width: 0 !important; /* 核心：防止 flex 子元素收縮 */
+        }
+
+        /* 2. 針對 MudSelect 的所有封裝層級強制撐開 */
+        /* 使用 ::deep 穿透元件封裝 */
+        ::deep .mud-input-control {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            display: flex !important; /* 強制從 inline-flex 變為 flex */
+        }
+
+        ::deep .mud-input-control-input-container {
+            width: 100% !important;
+            display: flex !important;
+        }
+
+        /* 3. 解決上鎖 (Disabled) 導致的底線縮短問題 */
+        ::deep .mud-input.mud-disabled {
+            width: 100% !important;
+            display: flex !important;
+        }
+
+        /* 4. 針對你 app.css 提到的底線樣式進行寬度強化 */
+        ::deep .mud-input.mud-input-underline:before,
+        ::deep .mud-input.mud-input-underline:after {
+            width: 100% !important;
+            left: 0 !important;
+        }
+
+        /* 5. 確保 meal-section 內的所有層級都不會收縮 */
+        .meal-section, .select-group {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
     }
 </style>
 

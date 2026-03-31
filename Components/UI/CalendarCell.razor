@@ -5,68 +5,79 @@
 @inject ISnackbar Snackbar
 @inject GlobalState GlobalState
 
-<div class="cell-wrapper @(IsLocked() ? "cell-locked" : 
-    IsWeekend ? "weekend" : "weekday") shadow-soft">
+<div class="cell-wrapper shadow-soft 
+    @(IsFinalLocked ? "cell-locked" : "weekday")">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
-        @if (IsLocked())
-        {
-            <div class="lock-overlay">
-                <MudIcon Icon="@Icons.Material.Filled.LockClock"
-                    Size="Size.Small" />
-            </div>
-        }
+        <div class="lock-overlay">
+            <MudToggleIconButton
+                Toggled="IsFinalLocked"
+                ToggledChanged="@((bool val) => OnManualToggleChanged(val))"
+                Icon="@Icons.Material.Filled.LockOpen"
+                Color="@Color.Success"
+                ToggledIcon="@Icons.Material.Filled.LockClock"
+                ToggledColor="@Color.Error"
+                Class="@(GlobalState.IsAdmin ? "" : "readonly-icon")" />
+        </div>
         @if (IsToday)
         {
             <div class="today-tag">TODAY</div>
         }
     </div>
 
-    <div class="@(IsWeekend ? "rest-mode" : "cell-body")">
-        <div class="meal-section">
-            <div class="section-label">餐點1</div>
-            <div class="select-group">
-                <MudSelect T="string" Placeholder="餐點" Dense Clearable
-                    Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2" Disabled="@IsLocked()"
-                    Value="@(Order!.BentoItem!.Name ?? string.Empty)"
-                    ValueChanged="@((string val) => 
-                        OnMealChanged(val, "normal"))">
-                    @foreach (var type in MealProvider.GetMealTypes())
-                    {
-                        <MudSelectItem Value="@type" />
-                    }
-                </MudSelect>
-                @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                    Class="rice-cycle-btn"
-                    OnClick="@(() => CycleRiceOptions("normal"))">
-                    @GetRiceOptions("normal")
-                </MudButton> *@
+    @if (IsEditMode)
+    {
+        <MudText>@LockedReason</MudText>
+    }
+    else
+    {
+        <div class="@(IsWeekend ? "rest-mode" : "cell-body")">
+            <div class="meal-section">
+                <div class="section-label">餐點1</div>
+                <div class="select-group">
+                    <MudSelect T="string" Placeholder="餐點" Dense Clearable
+                        Variant="Variant.Text" Margin="Margin.Dense"
+                        Class="flex-grow-2" Disabled="@IsFinalLocked"
+                        Value="@(Order!.BentoItem!.Name ?? string.Empty)"
+                        ValueChanged="@((string val) => 
+                            OnMealChanged(val, "normal"))">
+                        @foreach (var type in MealProvider.GetMealTypes())
+                        {
+                            <MudSelectItem Value="@type" />
+                        }
+                    </MudSelect>
+                    @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                        Class="rice-cycle-btn"
+                        OnClick="@(() => CycleRiceOptions("normal"))">
+                        @GetRiceOptions("normal")
+                    </MudButton> *@
+                </div>
             </div>
-        </div>
 
-        <div class="meal-section">
-            <div class="section-label">餐點2</div>
-            <div class="select-group">
-                <MudSelect T="string" Placeholder="餐點" Dense Clearable
-                    Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2" Disabled="@IsLocked()"
-                    Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
-                    ValueChanged="@((string val) => 
-                        OnMealChanged(val, "add"))">
-                    @foreach (var type in MealProvider.GetMealTypes())
-                    {
-                        <MudSelectItem Value="@type" />
-                    }
-                </MudSelect>
-                @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                    Class="rice-cycle-btn"
-                    OnClick="@(() => CycleRiceOptions(""))">
-                    @GetRiceOptions("")
-                </MudButton> *@
+            <div class="meal-section">
+                <div class="section-label">餐點2</div>
+                <div class="select-group">
+                    <MudSelect T="string" Placeholder="餐點" Dense Clearable
+                        Variant="Variant.Text" Margin="Margin.Dense"
+                        Class="flex-grow-2" Disabled="@IsFinalLocked"
+                        Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
+                        ValueChanged="@((string val) => 
+                            OnMealChanged(val, "add"))">
+                        @foreach (var type in MealProvider.GetMealTypes())
+                        {
+                            <MudSelectItem Value="@type" />
+                        }
+                    </MudSelect>
+                    @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                        Class="rice-cycle-btn"
+                        OnClick="@(() => CycleRiceOptions(""))">
+                        @GetRiceOptions("")
+                    </MudButton> *@
+                </div>
             </div>
         </div>
-    </div>
+    }
+
 </div>
 
 <style>
@@ -88,9 +99,10 @@
         border-color: var(--mud-palette-primary);
     }
     .cell-locked {
-        background-color: #f5f5f5; /* 灰色背景 */
-        pointer-events: none;      /* 確保從 CSS 層級也無法點擊 */
-        opacity: 0.7;
+        background-color: #DBD5CF !important;
+        border-style: dashed;
+        @* filter: grayscale(0.6); *@
+        opacity: 0.8;
     }
     .lock-overlay {
         font-size: 10px;
@@ -103,10 +115,6 @@
     
     .weekday {
         background-color: #FFFFFF;
-    }
-    .weekend {
-        background-color: #DBD5CF; 
-        border-style: dashed;
     }
 
     .cell-header {
@@ -167,6 +175,13 @@
         border-color: #FF9800 !important;
     }
 
+    .readonly-icon {
+        pointer-events: none; 
+        cursor: default;
+        /* 如果想稍微暗示不能點，可以加這行，不加就是完全原色 */
+        /* opacity: 0.9; */ 
+    }
+
     /* 針對手機模式的強力修正 */
     @@media (max-width: 960px) {
         /* 1. 確保 cell-body 是填滿的 */
@@ -221,12 +236,19 @@
     [Parameter]
     public Order? Order { get; set; } = new();
 
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+    [Parameter]
+    public string LockedReason { get; set; } = string.Empty;
+
+
     private Order _internalOrder = new();
     private CancellationTokenSource? _cts;
     private bool IsToday => Date.Date == DateTime.Today;
     private bool IsWeekend => 
         Date.DayOfWeek == DayOfWeek.Saturday ||
         Date.DayOfWeek == DayOfWeek.Sunday;
+    private bool _isManualLocked = false;
 
     private MealProvider mealProvider = new();
     // "普", "多", "少", "無"
@@ -372,37 +394,54 @@
         catch (TaskCanceledException) {}
     }
 
-    // 鎖定餐點選擇
-    private bool IsLocked()
+    private bool IsFinalLocked => _isManualLocked || IsSystemLocked();
+
+    private bool IsSystemLocked()
     {
         var now = DateTime.Now;
         var today = now.Date;
-        var orderDate = Date;
 
-        if (GlobalState.IsAdmin)
-        {
-            return false;
-        }
-
-        // 每日9點鎖定
-        if (orderDate == today)
-        {
-            return now.Hour >= 9 && now.Minute >= 1;
-        }
-
-        // 假日時鎖定
-        if (orderDate.DayOfWeek == DayOfWeek.Saturday || 
-            orderDate.DayOfWeek == DayOfWeek.Sunday)
+        if (Date < today)
         {
             return true;
         }
-        
-        // 今天以前的日期鎖定
-        if (orderDate < today)
+
+        if (Date.DayOfWeek == DayOfWeek.Saturday ||
+            Date.DayOfWeek == DayOfWeek.Sunday)
+        {
+            return true;
+        }
+
+        if (Date == today && (now.Hour > 9 ||
+            (now.Hour == 9 && now.Minute >= 1)))
         {
             return true;
         }
 
         return false;
+    }
+
+    private async Task OnManualToggleChanged(bool value)
+    {
+        if (!GlobalState.IsAdmin)
+        {
+            return;
+        }
+
+        _isManualLocked = value;
+
+        StateHasChanged();
+    }
+
+    private bool GetIsReadOnly()
+    {
+        if (GlobalState.IsAdmin)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
     }
 }

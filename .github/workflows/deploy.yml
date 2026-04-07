@@ -17,21 +17,21 @@ jobs:
       with:
         dotnet-version: 10.0.x
 
+    - name: 清理專案
+      run: dotnet clean
+
     - name: 發布專案
       run: dotnet publish -c Release -o ./publish
 
-    - name: 遠端停止服務並清理 (避免權限與鎖定問題)
+    - name: 遠端停止服務並清理
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.GCP_HOST }}
-        username: ${{ secrets.GCP_USER }}
-        key: ${{ secrets.GCP_SSH_KEY }}
         script: |
-          # 1. 停止服務釋放 DLL 鎖定
           sudo systemctl stop bento-order.service
-          # 2. 確保目標資料夾存在且權限正確
+          # 徹底刪除舊的發布資料夾，避免資產衝突
+          sudo rm -rf /home/excalibur0225/bento-order/publish
           mkdir -p /home/excalibur0225/bento-order/publish
-          sudo chown -R ${{ secrets.GCP_USER }}:${{ secrets.GCP_USER }} /home/excalibur0225/bento-order
+          sudo chown -R ${{ secrets.GCP_USER }} /home/excalibur0225/bento-order
 
     - name: 傳送檔案 (SCP)
       uses: appleboy/scp-action@master

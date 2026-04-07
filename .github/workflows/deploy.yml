@@ -15,7 +15,10 @@ jobs:
     - name: 設定 .NET 環境
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 10.0.x
+
+    - name: 清理專案
+      run: dotnet clean
 
     - name: 發布專案
       run: dotnet publish -c Release -o ./publish
@@ -29,6 +32,7 @@ jobs:
         script: |
           # 1. 停止服務釋放 DLL 鎖定
           sudo systemctl stop bento-order.service
+
           # 2. 確保目標資料夾存在且權限正確
           mkdir -p /home/excalibur0225/bento-order/publish
           sudo chown -R ${{ secrets.GCP_USER }}:${{ secrets.GCP_USER }} /home/excalibur0225/bento-order

@@ -38,6 +38,12 @@ builder.Services.AddServerSideBlazor().AddHubOptions(options =>
     options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
 });
 
+// builder.Services.ConfigureExternalCookie(options =>
+// {
+//     options.Cookie.HttpOnly = true;
+//     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+// });
+
 var app = builder.Build();
 
 // 更新資料庫

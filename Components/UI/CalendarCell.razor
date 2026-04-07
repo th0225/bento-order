@@ -6,12 +6,12 @@
 @inject GlobalState GlobalState
 
 <div class="cell-wrapper shadow-soft 
-    @(IsFinalLocked ? "cell-locked" : "weekday")">
+    @(_isFinalLocked ? "cell-locked" : "weekday")">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
         <div class="lock-overlay">
             <MudToggleIconButton
-                Toggled="IsFinalLocked"
+                Toggled="_isFinalLocked"
                 ToggledChanged="@((bool val) => OnManualToggleChanged(val))"
                 Icon="@Icons.Material.Filled.LockOpen"
                 Color="@Color.Success"
@@ -25,19 +25,15 @@
         }
     </div>
 
-    @if (IsEditMode)
+    @if (!IsEditMode)
     {
-        <MudText>@LockedReason</MudText>
-    }
-    else
-    {
-        <div class="@(IsWeekend ? "rest-mode" : "cell-body")">
+        <div class="@(_isFinalLocked ? "rest-mode" : "cell-body")">
             <div class="meal-section">
                 <div class="section-label">餐點1</div>
                 <div class="select-group">
                     <MudSelect T="string" Placeholder="餐點" Dense Clearable
                         Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="flex-grow-2" Disabled="@IsFinalLocked"
+                        Class="flex-grow-2" Disabled="@_isFinalLocked"
                         Value="@(Order!.BentoItem!.Name ?? string.Empty)"
                         ValueChanged="@((string val) => 
                             OnMealChanged(val, "normal"))">
@@ -59,7 +55,7 @@
                 <div class="select-group">
                     <MudSelect T="string" Placeholder="餐點" Dense Clearable
                         Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="flex-grow-2" Disabled="@IsFinalLocked"
+                        Class="flex-grow-2" Disabled="@_isFinalLocked"
                         Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
                         ValueChanged="@((string val) => 
                             OnMealChanged(val, "add"))">
@@ -238,17 +234,18 @@
 
     [Parameter]
     public bool IsEditMode { get; set; } = false;
+
     [Parameter]
-    public string LockedReason { get; set; } = string.Empty;
+    public LockedDate? LockedDate { get; set; }
 
 
     private Order _internalOrder = new();
     private CancellationTokenSource? _cts;
     private bool IsToday => Date.Date == DateTime.Today;
-    private bool IsWeekend => 
-        Date.DayOfWeek == DayOfWeek.Saturday ||
-        Date.DayOfWeek == DayOfWeek.Sunday;
-    private bool _isManualLocked = false;
+    // 資料庫上鎖
+    private bool _isDatabaseLocked = false;
+    // 最終上鎖
+    private bool _isFinalLocked = false;
 
     private MealProvider mealProvider = new();
     // "普", "多", "少", "無"
@@ -323,6 +320,16 @@
                 }
             };
         }
+
+        _isFinalLocked = IsSystemLocked();
+
+        if (LockedDate != null)
+        {
+            _isDatabaseLocked = LockedDate.IsLocked;
+            _isFinalLocked = _isDatabaseLocked;
+        }
+
+        StateHasChanged();
     }
 
     // 循環按鈕
@@ -394,8 +401,6 @@
         catch (TaskCanceledException) {}
     }
 
-    private bool IsFinalLocked => _isManualLocked || IsSystemLocked();
-
     private bool IsSystemLocked()
     {
         var now = DateTime.Now;
@@ -428,20 +433,14 @@
             return;
         }
 
-        _isManualLocked = value;
+        LockedDate lockedDate = new()
+        {
+            Date = Date,
+            IsLocked = value
+        };
+
+        await BentoDbService.SaveLockedDateAsync(lockedDate);
 
         StateHasChanged();
-    }
-
-    private bool GetIsReadOnly()
-    {
-        if (GlobalState.IsAdmin)
-        {
-            return false;
-        }
-        else
-        {
-            return true;
-        }
     }
 }

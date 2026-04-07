@@ -58,6 +58,7 @@ public class BentoDbService
         }
     }
 
+
     // --- 餐點訂購相關 ---
     public async Task UpsertOrderAsync(Order order, bool isAdmin)
     {
@@ -228,6 +229,7 @@ public class BentoDbService
         return result;
     }
 
+
     // --- 系統設定相關 ---
     public async Task SaveConfigAsync(SystemConfig config)
     {
@@ -253,5 +255,33 @@ public class BentoDbService
         using var db = _dbFactory.CreateDbContext();
 
         return await db.SystemConfig.ToListAsync();
+    }
+
+
+    // --- 日期鎖定設定相關 ---
+    public async Task SaveLockedDateAsync(LockedDate lockedDate)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        var _lockedDate = db.LockedDates.FirstOrDefault(
+            c => c.Date == lockedDate.Date);
+        
+        if (_lockedDate == null)
+        {
+            db.LockedDates.Add(lockedDate);
+        }
+        else
+        {
+            _lockedDate.IsLocked = lockedDate.IsLocked;
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<List<LockedDate>> GetLockedDatesAsync()
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        return await db.LockedDates.ToListAsync();
     }
 }

@@ -62,13 +62,19 @@
                     o => o.OrderDate == date
                 );
 
+                var lockedDate = _lockedDates.FirstOrDefault(
+                    d => d.Date.Date == date
+                );
+
                 if (order != null)
                 {
-                    <CalendarCell @key="date" Date="@date" Order="order"/>
+                    <CalendarCell @key="date" Date="@date" Order="order"
+                        LockedDate="lockedDate" />
                 }
                 else
                 {
-                    <CalendarCell @key="date" Date="@date" />
+                    <CalendarCell @key="date" Date="@date"
+                        LockedDate="lockedDate" />
                 }
             }
         </div>
@@ -135,6 +141,7 @@
 @code {
     private DateTime _currentDate = DateTime.Today;
     private List<Order> orders = [];
+    private List<LockedDate> _lockedDates = [];
     private readonly string[] _weekDays = {
         "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"
     };
@@ -167,6 +174,8 @@
         orders = await BentoDbService.GetOrdersByMonthUserAsync(
             _currentDate.Year, _currentDate.Month, GlobalState.CurrentUser!.Id
         );
+
+        _lockedDates = await BentoDbService.GetLockedDatesAsync();
     }
 
     // 上個月

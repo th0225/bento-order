@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<MonthlyOrder> MonthlyMenus => Set<MonthlyOrder>();
     public DbSet<SystemConfig> SystemConfig => Set<SystemConfig>();
+    public DbSet<LockedDate> LockedDates => Set<LockedDate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

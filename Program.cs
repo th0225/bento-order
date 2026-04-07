@@ -3,7 +3,9 @@ using bento_order.Data;
 using bento_order.Models;
 using bento_order.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +40,19 @@ builder.Services.AddServerSideBlazor().AddHubOptions(options =>
     options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
 });
 
+// 註冊驗證服務 (這是你目前漏掉的部分)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.Cookie.Name = "BentoOrderAuth";
+    options.LoginPath = "/Login";
+});
+
+builder.Services.AddAuthorization();
+
 // builder.Services.ConfigureExternalCookie(options =>
 // {
 //     options.Cookie.HttpOnly = true;
@@ -45,6 +60,21 @@ builder.Services.AddServerSideBlazor().AddHubOptions(options =>
 // });
 
 var app = builder.Build();
+
+// 處理轉發標頭
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
+});
+
+// 動態判斷cookie安全性
+app.UseCookiePolicy(new CookiePolicyOptions
+{
+    HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
+    Secure = CookieSecurePolicy.SameAsRequest,
+    MinimumSameSitePolicy = SameSiteMode.Lax
+});
 
 // 更新資料庫
 using (var scope = app.Services.CreateScope())
@@ -62,6 +92,14 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+// 處理 Cloudflare 轉發與 Cookie 策略
+app.UseForwardedHeaders();
+app.UseCookiePolicy();
+
+// 認證與授權
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 app.UseStaticFiles();

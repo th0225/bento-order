@@ -15,7 +15,7 @@ jobs:
     - name: 設定 .NET 環境
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 10.0.x
 
     - name: 發布專案
       run: dotnet publish -c Release -o ./publish

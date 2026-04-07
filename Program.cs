@@ -61,21 +61,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// 處理轉發標頭
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor |
-        ForwardedHeaders.XForwardedProto
-});
-
-// 動態判斷cookie安全性
-app.UseCookiePolicy(new CookiePolicyOptions
-{
-    HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
-    Secure = CookieSecurePolicy.SameAsRequest,
-    MinimumSameSitePolicy = SameSiteMode.Lax
-});
-
+// --- 1. 基礎環境設定 ---
 // 更新資料庫
 using (var scope = app.Services.CreateScope())
 {
@@ -90,19 +76,38 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+app.UseStatusCodePagesWithReExecute("/not-found", 
+    createScopeForStatusCodePages: true);
 
-// 處理 Cloudflare 轉發與 Cookie 策略
-app.UseForwardedHeaders();
-app.UseCookiePolicy();
+// --- 2. 請求處理與安全性 ---
+// 處理轉發標頭
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
+});
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+// 設定cookie策略
+app.UseCookiePolicy(new CookiePolicyOptions
+{
+    HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always,
+    Secure = CookieSecurePolicy.SameAsRequest,
+    MinimumSameSitePolicy = SameSiteMode.Lax
+});
+
+// --- 3. 認證、授權與防偽 ---
+app.UseRouting();
 
 // 認證與授權
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthentication(); // 認證：你是誰
+app.UseAuthorization(); // 授權：你能做什麼
 
 app.UseAntiforgery();
-app.UseStaticFiles();
+
+// --- 4. 端點對應 ---
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

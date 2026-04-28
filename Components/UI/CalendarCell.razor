@@ -25,54 +25,41 @@
         }
     </div>
 
-    @if (!IsEditMode)
-    {
-        <div class="@(_isFinalLocked ? "rest-mode" : "cell-body")">
-            <div class="meal-section">
-                <div class="section-label">餐點1</div>
-                <div class="select-group">
-                    <MudSelect T="string" Placeholder="餐點" Dense Clearable
-                        Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="flex-grow-2" Disabled="@_isFinalLocked"
-                        Value="@(Order!.BentoItem!.Name ?? string.Empty)"
-                        ValueChanged="@((string val) => 
-                            OnMealChanged(val, "normal"))">
-                        @foreach (var type in MealProvider.GetMealTypes())
-                        {
-                            <MudSelectItem Value="@type" />
-                        }
-                    </MudSelect>
-                    @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                        Class="rice-cycle-btn"
-                        OnClick="@(() => CycleRiceOptions("normal"))">
-                        @GetRiceOptions("normal")
-                    </MudButton> *@
-                </div>
-            </div>
-
-            <div class="meal-section">
-                <div class="section-label">餐點2</div>
-                <div class="select-group">
-                    <MudSelect T="string" Placeholder="餐點" Dense Clearable
-                        Variant="Variant.Text" Margin="Margin.Dense"
-                        Class="flex-grow-2" Disabled="@_isFinalLocked"
-                        Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
-                        ValueChanged="@((string val) => 
-                            OnMealChanged(val, "add"))">
-                        @foreach (var type in MealProvider.GetMealTypes())
-                        {
-                            <MudSelectItem Value="@type" />
-                        }
-                    </MudSelect>
-                    @* <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                        Class="rice-cycle-btn"
-                        OnClick="@(() => CycleRiceOptions(""))">
-                        @GetRiceOptions("")
-                    </MudButton> *@
-                </div>
+    <div class="@(_isFinalLocked ? "rest-mode" : "cell-body")">
+        <div class="meal-section">
+            <div class="section-label">餐點1</div>
+            <div class="select-group">
+                <MudSelect T="string" Placeholder="餐點" Dense Clearable
+                    Variant="Variant.Text" Margin="Margin.Dense"
+                    Class="flex-grow-2" Disabled="@_isFinalLocked"
+                    Value="@(Order!.BentoItem!.Name ?? string.Empty)"
+                    ValueChanged="@((string val) => 
+                        OnMealChanged(val, "normal"))">
+                    @foreach (var type in MealProvider.GetMealTypes())
+                    {
+                        <MudSelectItem Value="@type" />
+                    }
+                </MudSelect>
             </div>
         </div>
-    }
+
+        <div class="meal-section">
+            <div class="section-label">餐點2</div>
+            <div class="select-group">
+                <MudSelect T="string" Placeholder="餐點" Dense Clearable
+                    Variant="Variant.Text" Margin="Margin.Dense"
+                    Class="flex-grow-2" Disabled="@_isFinalLocked"
+                    Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
+                    ValueChanged="@((string val) => 
+                        OnMealChanged(val, "add"))">
+                    @foreach (var type in MealProvider.GetMealTypes())
+                    {
+                        <MudSelectItem Value="@type" />
+                    }
+                </MudSelect>
+            </div>
+        </div>
+    </div>
 
 </div>
 
@@ -328,6 +315,8 @@
             _isDatabaseLocked = LockedDate.IsLocked;
             _isFinalLocked = _isDatabaseLocked;
         }
+
+        _isFinalLocked = !IsEditMode;
 
         StateHasChanged();
     }

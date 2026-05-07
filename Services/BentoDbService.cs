@@ -99,12 +99,12 @@ public class BentoDbService
             existingOrder.AdditionalBentoItem.Option =
                 order.AdditionalBentoItem?.Option ?? string.Empty;
 
-            // Console.WriteLine("++++++++++++++++");
-            // Console.WriteLine(order.BentoItem.Name);
-            // Console.WriteLine(order.BentoItem.Option);
-            // Console.WriteLine(order.AdditionalBentoItem.Name);
-            // Console.WriteLine(order.AdditionalBentoItem.Option);
-            // Console.WriteLine("------------------");
+            Console.WriteLine("++++++++++++++++");
+            Console.WriteLine(order.BentoItem.Name);
+            Console.WriteLine(order.BentoItem.Option);
+            Console.WriteLine(order.AdditionalBentoItem.Name);
+            Console.WriteLine(order.AdditionalBentoItem.Option);
+            Console.WriteLine("------------------");
 
             db.Orders.Update(existingOrder);
 

@@ -234,17 +234,10 @@
     // 最終上鎖
     private bool _isFinalLocked = false;
 
-    private MealProvider mealProvider = new();
-    // "普", "多", "少", "無"
-    private List<string> _riceOptions = [];
-    // 0, 1, 2, 3
-    private List<int> _riceOptionsIndex = [0, 0];
-
     // 初始化
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        _riceOptions = mealProvider.GetMealOptions();
 
         if (Order == null)
         {
@@ -253,11 +246,11 @@
                 OrderDate = DateTime.Now.Date,
                 BentoItem = new BentoItem
                 {
-                    Name = string.Empty, Option = "正"
+                    Name = string.Empty
                 },
                 AdditionalBentoItem = new BentoItem
                 {
-                    Name = string.Empty, Option = "正"
+                    Name = string.Empty
                 }
             };
         }
@@ -265,11 +258,11 @@
         {
             Order.BentoItem ??= new BentoItem
             {
-                Name = string.Empty, Option = "正"
+                Name = string.Empty
             };
             Order.AdditionalBentoItem ??= new BentoItem
             {
-                Name = string.Empty, Option = "正"
+                Name = string.Empty
             };
         }
     }
@@ -286,11 +279,11 @@
                 UserId = Order.UserId,
                 OrderDate = Date,
                 BentoItem = Order.BentoItem ?? new() {
-                    Name = string.Empty, Option = "正"
+                    Name = string.Empty
                 },
                 AdditionalBentoItem = Order.AdditionalBentoItem ??
                     new () {
-                    Name = string.Empty, Option = "正"
+                    Name = string.Empty
                 }
             };
         }
@@ -300,10 +293,10 @@
             {
                 OrderDate = Date,
                 BentoItem = new () {
-                    Name = string.Empty, Option = "正"
+                    Name = string.Empty
                 },
                 AdditionalBentoItem = new() {
-                    Name = string.Empty, Option = "正"
+                    Name = string.Empty
                 }
             };
         }
@@ -316,41 +309,7 @@
             _isFinalLocked = _isDatabaseLocked;
         }
 
-        if (IsEditMode == true)
-        {
-            _isFinalLocked = true;
-        }
-
         StateHasChanged();
-    }
-
-    // 循環按鈕
-    private async Task CycleRiceOptions(string target)
-    {
-        if (target == "normal")
-        {
-            _riceOptionsIndex[0] = 
-                (_riceOptionsIndex[0] + 1) % _riceOptions.Count;
-        }
-        else
-        {
-            _riceOptionsIndex[1] = 
-                (_riceOptionsIndex[1] + 1) % _riceOptions.Count;
-        }
-
-        await TriggerAutoSave();
-    }
-
-    private string GetRiceOptions(string target)
-    {
-        if (target == "normal")
-        {
-            return _riceOptions[_riceOptionsIndex[0]];
-        }
-        else
-        {
-            return _riceOptions[_riceOptionsIndex[1]];
-        }
     }
 
     private async Task OnMealChanged(string value, string type)
@@ -362,14 +321,10 @@
         if (type == "normal")
         {
             _internalOrder.BentoItem!.Name = value;
-            _internalOrder.BentoItem!.Option =
-                _riceOptions[_riceOptionsIndex[0]];
         }
         else
         {
-            _internalOrder.BentoItem!.Name = value;
-            _internalOrder.BentoItem!.Option =
-                _riceOptions[_riceOptionsIndex[1]];
+            _internalOrder.AdditionalBentoItem!.Name = value;
         }
 
         await TriggerAutoSave();

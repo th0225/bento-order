@@ -159,11 +159,10 @@ public class BentoDbService
         var stats = orders
             .SelectMany(o => new[] { o.BentoItem, o.AdditionalBentoItem })
             .Where(i => i != null && !string.IsNullOrEmpty(i.Name))
-            .GroupBy(i => new {i.Name, i.Option })
+            .GroupBy(i => new {i.Name})
             .Select(g => new OrderCount
             {
                 MealName = g.Key.Name,
-                Option = g.Key.Option,
                 Count = g.Count()
             })
             .OrderBy(x => x.MealName)

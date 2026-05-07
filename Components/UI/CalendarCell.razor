@@ -309,6 +309,11 @@
             _isFinalLocked = _isDatabaseLocked;
         }
 
+        if (IsEditMode)
+        {
+            _isFinalLocked = false;
+        }
+
         StateHasChanged();
     }
 

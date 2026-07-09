@@ -1,13 +1,10 @@
 @page "/"
 @page "/login"
+@attribute [AllowAnonymous]
 
 @using System.Text.Json
-@using Microsoft.AspNetCore.Identity.Data
-@using bento_order.Data
 @using bento_order.Models
-@using bento_order.Services
 
-@inject BentoDbService BentoDbService
 @inject GlobalState GlobalState
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -45,8 +42,18 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                 FullWidth="true" Size="Size.Large"
                 Class="mt-6 py-3 rounded-lg"
-                ButtonType="ButtonType.Submit" OnClick="HandleLogin">
-                登入
+                ButtonType="ButtonType.Button" OnClick="HandleLogin"
+                Disabled="@_isLoggingIn">
+                @if (_isLoggingIn)
+                {
+                    <MudProgressCircular Size="Size.Small"
+                        Indeterminate="true" Class="mr-2" />
+                    <span>登入中...</span>
+                }
+                else
+                {
+                    <span>登入</span>
+                }
             </MudButton>
         </MudForm>
     </MudPaper>
@@ -56,6 +63,7 @@
     private string _username = "";
     private string _password = "";
     private string _errorMessage = "";
+    private bool _isLoggingIn = false;
 
     // 密碼可見性切換
     private bool _isShowPassword;
@@ -65,41 +73,57 @@
     // 登錄系統
     private async Task HandleLogin()
     {
-        // 使用者登錄
-        var user = await BentoDbService.LoginAsync(_username, _password);
-        if (user != null)
+        if (_isLoggingIn)
         {
-            // 序列化使用者資訊儲存至瀏覽器
-            UserSession userSession = new()
-            {
-                Id = user.Id,
-                Username = user.Username,
-                Realname = user.RealName,
-                Role = user.Role,
-                Expiry = DateTime.Now.AddDays(7)
-            };
-            string userJson = JsonSerializer.Serialize(userSession);
-            await JS.InvokeVoidAsync(
-                "localStorage.setItem",
-                "user", userJson
+            return;
+        }
+
+        _isLoggingIn = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var authResultJson = await JS.InvokeAsync<string>(
+                "bentoAuth.login",
+                _username,
+                _password
             );
 
-            // 儲存登入者資訊
-            GlobalState.CurrentUser = userSession;
+            var authResult = JsonSerializer.Deserialize<AuthLoginResult>(
+                authResultJson,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }
+            );
 
-            if (GlobalState.IsAdmin)
+            if (authResult?.Success == true && authResult.User != null)
             {
-                Navigation.NavigateTo("/admin/users");
+                // 儲存登入者資訊
+                GlobalState.CurrentUser = authResult.User;
+
+                if (GlobalState.IsAdmin)
+                {
+                    Navigation.NavigateTo("/admin/users", forceLoad: true);
+                }
+                else
+                {
+                    // 跳轉至首頁
+                    Navigation.NavigateTo("/home", forceLoad: true);
+                }
             }
             else
             {
-                // 跳轉至首頁
-                Navigation.NavigateTo("/home");
+                _errorMessage = authResult?.ErrorMessage ?? "帳號密碼有誤";
             }
         }
-        else
+        catch
         {
-            _errorMessage = "帳號密碼有誤";
+            _errorMessage = "登入失敗，請稍後再試";
+        }
+        finally
+        {
+            _isLoggingIn = false;
         }
     }
 
@@ -143,5 +167,12 @@
             _passwordInputIcon = Icons.Material.Filled.Visibility;
             _passwordInput = InputType.Text;
         }
+    }
+
+    private sealed class AuthLoginResult
+    {
+        public bool Success { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public UserSession? User { get; set; }
     }
 }

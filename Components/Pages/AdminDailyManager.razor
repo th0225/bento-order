@@ -1,4 +1,5 @@
 @page "/admin/daily-manager"
+@attribute [Authorize(Roles = "Admin")]
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
@@ -96,7 +97,7 @@
             if (order == null)
             {
                 order = new();
-                order.Id = userId;
+                order.UserId = userId;
                 order.OrderDate = _selectedDate.Value;
 
                 BentoItem bentoItem = new()

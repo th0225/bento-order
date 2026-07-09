@@ -1,4 +1,5 @@
 ﻿@page "/home"
+@attribute [Authorize]
 @using System.Globalization
 @using bento_order.Services
 
@@ -157,11 +158,7 @@
         // 確認是否初始化
         await GlobalState.EnsureInitialized(JS);
 
-        if (GlobalState.CurrentUser == null)
-        {
-            Navigation.NavigateTo("/");
-        }
-        else if (firstRender)
+        if (GlobalState.CurrentUser != null && firstRender)
         {
             await LoadMonthDataAsync();
             StateHasChanged();

@@ -1,4 +1,5 @@
 @page "/admin/date-manager"
+@attribute [Authorize(Roles = "Admin")]
 
 @using System.Globalization
 @using bento_order.Services
@@ -145,11 +146,7 @@
         // 確認是否初始化
         await GlobalState.EnsureInitialized(JS);
 
-        if (GlobalState.CurrentUser == null)
-        {
-            Navigation.NavigateTo("/");
-        }
-        else if (firstRender)
+        if (firstRender)
         {
             await LoadMonthDataAsync();
             StateHasChanged();
@@ -158,10 +155,6 @@
 
     // 取得整月份資料
     private async Task LoadMonthDataAsync(){
-        // 從db取得餐點資料
-        orders = await BentoDbService.GetOrdersByMonthUserAsync(
-            _currentDate.Year, _currentDate.Month, GlobalState.CurrentUser!.Id
-        );
         _lockedDates = await BentoDbService.GetLockedDatesAsync();
     }
 

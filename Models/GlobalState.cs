@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Claims;
 using Microsoft.JSInterop;
 
 namespace bento_order.Models;
@@ -24,9 +25,9 @@ public class GlobalState
             return;
         }
 
-        // 讀取user
+        // 以伺服器端驗證 Cookie 為準，localStorage 只作為顯示快取。
         var userJson = await js.InvokeAsync<string>(
-            "localStorage.getItem", "user"
+            "bentoAuth.getSession"
         );
 
         if (!string.IsNullOrEmpty(userJson))
@@ -59,6 +60,30 @@ public class GlobalState
             IsInitialized = true;
         }
 
+        NotifyStateChanged();
+    }
+
+    public void SetCurrentUserFromClaims(ClaimsPrincipal principal)
+    {
+        if (principal.Identity?.IsAuthenticated != true)
+        {
+            CurrentUser = null;
+            IsInitialized = true;
+            NotifyStateChanged();
+            return;
+        }
+
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        CurrentUser = new UserSession
+        {
+            Id = int.TryParse(userId, out var id) ? id : 0,
+            Username = principal.Identity.Name ?? string.Empty,
+            Realname = principal.FindFirstValue("RealName") ?? string.Empty,
+            Role = principal.FindFirstValue(ClaimTypes.Role) ?? string.Empty,
+            Expiry = DateTime.Now.AddDays(7)
+        };
+
+        IsInitialized = true;
         NotifyStateChanged();
     }
 

@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,7 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddCascadingAuthenticationState();
 // MudBlazor Service
 builder.Services.AddMudServices();
 // 全域狀態
@@ -107,9 +110,92 @@ app.UseAuthorization(); // 授權：你能做什麼
 
 app.UseAntiforgery();
 
+app.MapPost("/auth/login", async (
+    LoginRequest request,
+    BentoDbService bentoDbService,
+    HttpContext httpContext) =>
+{
+    var user = await bentoDbService.LoginAsync(
+        request.Username,
+        request.Password
+    );
+
+    if (user == null)
+    {
+        return Results.Unauthorized();
+    }
+
+    var claims = new List<Claim>
+    {
+        new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new(ClaimTypes.Name, user.Username),
+        new(ClaimTypes.Role, user.Role),
+        new("RealName", user.RealName)
+    };
+
+    var identity = new ClaimsIdentity(
+        claims,
+        CookieAuthenticationDefaults.AuthenticationScheme
+    );
+
+    await httpContext.SignInAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        new ClaimsPrincipal(identity),
+        new AuthenticationProperties
+        {
+            IsPersistent = true,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+        }
+    );
+
+    return Results.Ok(new UserSession
+    {
+        Id = user.Id,
+        Username = user.Username,
+        Realname = user.RealName,
+        Role = user.Role,
+        Expiry = DateTime.Now.AddDays(7)
+    });
+}).AllowAnonymous();
+
+app.MapPost("/auth/logout", async (HttpContext httpContext) =>
+{
+    await httpContext.SignOutAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme
+    );
+
+    return Results.Ok();
+});
+
+app.MapGet("/auth/session", (HttpContext httpContext) =>
+{
+    var principal = httpContext.User;
+    if (principal.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+
+    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (!int.TryParse(userId, out var id))
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(new UserSession
+    {
+        Id = id,
+        Username = principal.Identity.Name ?? string.Empty,
+        Realname = principal.FindFirstValue("RealName") ?? string.Empty,
+        Role = principal.FindFirstValue(ClaimTypes.Role) ?? string.Empty,
+        Expiry = DateTime.Now.AddDays(7)
+    });
+});
+
 // --- 4. 端點對應 ---
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+public record LoginRequest(string Username, string Password);

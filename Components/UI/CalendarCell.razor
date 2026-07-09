@@ -369,8 +369,7 @@
             return true;
         }
 
-        if (Date == today && (now.Hour > 9 ||
-            (now.Hour == 9 && now.Minute >= 1)))
+        if (Date == today && now.Hour >= 9)
         {
             return true;
         }
@@ -393,6 +392,8 @@
 
         await BentoDbService.SaveLockedDateAsync(lockedDate);
 
+        _isDatabaseLocked = value;
+        _isFinalLocked = value;
         StateHasChanged();
     }
 }

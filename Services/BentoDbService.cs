@@ -1,12 +1,14 @@
 using bento_order.Data;
 using bento_order.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace bento_order.Services;
 
 public class BentoDbService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly PasswordHasher<User> _passwordHasher = new();
 
     public BentoDbService(IDbContextFactory<AppDbContext> dbFactory)
     {
@@ -18,9 +20,50 @@ public class BentoDbService
     public async Task<User?> LoginAsync(string username, string password)
     {
         using var db = _dbFactory.CreateDbContext();
-        return await db.Users.FirstOrDefaultAsync(
-            u => u.Username == username && u.PasswordHash == password
+        var user = await db.Users.FirstOrDefaultAsync(
+            u => u.Username == username
         );
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        var verificationResult = PasswordVerificationResult.Failed;
+        try
+        {
+            verificationResult = _passwordHasher.VerifyHashedPassword(
+                user,
+                user.PasswordHash,
+                password
+            );
+        }
+        catch (FormatException) {}
+
+        if (verificationResult == PasswordVerificationResult.Success ||
+            verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            if (verificationResult ==
+                PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                user.PasswordHash = _passwordHasher.HashPassword(
+                    user,
+                    password
+                );
+                await db.SaveChangesAsync();
+            }
+
+            return user;
+        }
+
+        if (user.PasswordHash == password)
+        {
+            user.PasswordHash = _passwordHasher.HashPassword(user, password);
+            await db.SaveChangesAsync();
+            return user;
+        }
+
+        return null;
     }
 
     // 取得使用者資料
@@ -40,6 +83,11 @@ public class BentoDbService
             return false;
         }
 
+        user.PasswordHash = _passwordHasher.HashPassword(
+            user,
+            user.PasswordHash
+        );
+
         db.Users.Add(user);
         await db.SaveChangesAsync();
         
@@ -51,7 +99,7 @@ public class BentoDbService
     {
         using var db = _dbFactory.CreateDbContext();
         var user = await db.Users.FindAsync(userId);
-        if (user != null && user.Role != "admin")
+        if (user != null && user.Role != "Admin")
         {
             db.Users.Remove(user);
             await db.SaveChangesAsync();
@@ -63,21 +111,29 @@ public class BentoDbService
     public async Task UpsertOrderAsync(Order order, bool isAdmin)
     {
         var now = DateTime.Now;
+        var orderDate = order.OrderDate.Date;
+        order.OrderDate = orderDate;
+        using var db = _dbFactory.CreateDbContext();
 
         if (!isAdmin)
         {
-            if (order.OrderDate.Date < now.Date ||
-                (order.OrderDate.Date == now.Date && now.Hour >= 9))
+            var isManuallyLocked = await db.LockedDates.AnyAsync(d =>
+                d.Date.Date == orderDate && d.IsLocked
+            );
+
+            if (orderDate < now.Date ||
+                (orderDate == now.Date && now.Hour >= 9) ||
+                orderDate.DayOfWeek == DayOfWeek.Saturday ||
+                orderDate.DayOfWeek == DayOfWeek.Sunday ||
+                isManuallyLocked)
             {
                 throw new UnauthorizedAccessException("您沒有權限在截止後修改訂單。");
             }
         }
 
-        using var db = _dbFactory.CreateDbContext();
-
         // 同時比對日期和使用者確認資料是否存在
         var existingOrder = await db.Orders
-            .FirstOrDefaultAsync(o => o.OrderDate == order.OrderDate
+            .FirstOrDefaultAsync(o => o.OrderDate == orderDate
                 && o.UserId == order.UserId);
 
         if (existingOrder == null)
@@ -98,13 +154,6 @@ public class BentoDbService
                 order.AdditionalBentoItem?.Name ?? string.Empty;
             existingOrder.AdditionalBentoItem.Option =
                 order.AdditionalBentoItem?.Option ?? string.Empty;
-
-            Console.WriteLine("++++++++++++++++");
-            Console.WriteLine(order.BentoItem.Name);
-            Console.WriteLine(order.BentoItem.Option);
-            Console.WriteLine(order.AdditionalBentoItem.Name);
-            Console.WriteLine(order.AdditionalBentoItem.Option);
-            Console.WriteLine("------------------");
 
             db.Orders.Update(existingOrder);
 
@@ -131,9 +180,11 @@ public class BentoDbService
     public async Task<Order?> GetOrderByUserAsync(int UserId, DateTime date)
     {
         using var db = _dbFactory.CreateDbContext();
-        var order = db.Orders
-            .FirstOrDefault(o => o.UserId == UserId &&
-                o.OrderDate.Month == date.Month && o.OrderDate.Day == date.Day);
+        var order = await db.Orders
+            .FirstOrDefaultAsync(o => o.UserId == UserId &&
+                o.OrderDate.Year == date.Year &&
+                o.OrderDate.Month == date.Month &&
+                o.OrderDate.Day == date.Day);
         return order;
     }
 
@@ -159,10 +210,11 @@ public class BentoDbService
         var stats = orders
             .SelectMany(o => new[] { o.BentoItem, o.AdditionalBentoItem })
             .Where(i => i != null && !string.IsNullOrEmpty(i.Name))
-            .GroupBy(i => new {i.Name})
+            .Select(i => i!.Name)
+            .GroupBy(name => name)
             .Select(g => new OrderCount
             {
-                MealName = g.Key.Name,
+                MealName = g.Key,
                 Count = g.Count()
             })
             .OrderBy(x => x.MealName)

@@ -8,6 +8,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject IBrowserViewportService ViewportService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 @implements IDisposable
 @inject IDialogService DialogService
@@ -143,7 +144,7 @@
 </style>
 
 @code {
-    private bool _drawerOpen = false;
+    private bool _drawerOpen = true;
 
     void DrawerToggle() => _drawerOpen = !_drawerOpen;
 
@@ -190,23 +191,19 @@
         GlobalState.OnChange += StateHasChanged;
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        GlobalState.SetCurrentUserFromClaims(authState.User);
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             // 確認是否初始化
             await GlobalState.EnsureInitialized(JS);
-
-            // 取得相對路徑 (不含域名)
-            var currentUrl =
-                Navigation.ToBaseRelativePath(Navigation.Uri);
-            
-            // 沒登錄且不在首頁
-            if (GlobalState.CurrentUser == null &&
-                !string.IsNullOrEmpty(currentUrl))
-            {
-                Navigation.NavigateTo("/");
-            }
 
             StateHasChanged();
         }
@@ -243,10 +240,8 @@
     {
         // 清除使用者資訊
         GlobalState.CurrentUser = null;
-        await JS.InvokeVoidAsync(
-            "localStorage.removeItem", "user"
-        );
+        await JS.InvokeVoidAsync("bentoAuth.logout");
         // 跳轉至登錄頁面
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/", forceLoad: true);
     }
 }

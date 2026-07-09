@@ -28,9 +28,18 @@ public class OrderReportService : BackgroundService
 
             using (var scope = _serviceProvider.CreateScope())
             {
-                var bentoService =
-                scope.ServiceProvider.GetRequiredService<BentoReportService>();
-                await bentoService.ProcessAndSendReportAsync();
+                try
+                {
+                    var bentoService =
+                    scope.ServiceProvider.GetRequiredService<BentoReportService>();
+                    await bentoService.ProcessAndSendReportAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(
+                        $"[Bento] LINE 統計發送失敗：{ex.Message}"
+                    );
+                }
             };
         }
     }

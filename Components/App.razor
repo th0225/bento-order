@@ -21,6 +21,52 @@
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
 
     <script>
+        window.bentoAuth = {
+            login: async (username, password) => {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('user');
+                    return JSON.stringify({
+                        success: false,
+                        errorMessage: '帳號密碼有誤'
+                    });
+                }
+
+                const user = await response.json();
+                localStorage.setItem('user', JSON.stringify(user));
+                return JSON.stringify({ success: true, user });
+            },
+
+            logout: async () => {
+                await fetch('/auth/logout', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                localStorage.removeItem('user');
+            },
+
+            getSession: async () => {
+                const response = await fetch('/auth/session', {
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('user');
+                    return '';
+                }
+
+                const user = await response.json();
+                localStorage.setItem('user', JSON.stringify(user));
+                return JSON.stringify(user);
+            }
+        };
+
         window.compressImage = async (streamReference, maxWidth, maxHeight, quality) => {
             try {
                 // 修正點：Blazor 的 streamReference 需要這樣讀取成 ArrayBuffer

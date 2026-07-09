@@ -1,4 +1,5 @@
 @page "/admin/menu-manager"
+@attribute [Authorize(Roles = "Admin")]
 @using bento_order.Services
 
 @inject MenuUploadService MenuUploadService

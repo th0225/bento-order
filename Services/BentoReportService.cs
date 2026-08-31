@@ -56,4 +56,21 @@ public class BentoReportService
         var client = new LineMessagingClient(lineAccessToken);
         await client.PushMessageAsync(lineId, finalMessage);
     }
+
+    public async Task SendNotifyOrderMessageAsync()
+    {
+        var finalMessage = $"菜單已上傳，請儘快完成下個月訂餐";
+
+        List<SystemConfig> configs = await _bentoDbService.GetConfigAsync();
+
+        string lineId = configs.FirstOrDefault(
+            c => c.Key == "LineOrderId"
+        )?.Value ?? string.Empty;
+        string lineAccessToken = configs.FirstOrDefault(
+            c => c.Key == "LineAccessToken"
+        )?.Value ?? string.Empty;
+
+        var client = new LineMessagingClient(lineAccessToken);
+        await client.PushMessageAsync(lineId, finalMessage);
+    }
 }

@@ -24,7 +24,7 @@
                 !_isShowLineAccessToken" />
 
         <MudTextField @bind-Value="@_lineId" Class="mt-4"
-            Label="LINE 群組/聊天室 ID" Variant="Variant.Outlined"
+            Label="LINE 群組/聊天室 ID(每日訂餐)" Variant="Variant.Outlined"
             Margin="Margin.Dense"
             InputType="@(_isShowLineId ? InputType.Text : InputType.Password)"
             Adornment="Adornment.End"
@@ -32,6 +32,16 @@
                 Icons.Material.Filled.Visibility : 
                 Icons.Material.Filled.VisibilityOff)"
             OnAdornmentClick="() => _isShowLineId = !_isShowLineId" />
+
+        <MudTextField @bind-Value="@_lineOrderId" Class="mt-4"
+            Label="LINE 群組/聊天室 ID(每月通知訂餐)" Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+            InputType="@(_isShowLineOrderId ? InputType.Text : InputType.Password)"
+            Adornment="Adornment.End"
+            AdornmentIcon="@(_isShowLineOrderId ?
+                Icons.Material.Filled.Visibility : 
+                Icons.Material.Filled.VisibilityOff)"
+            OnAdornmentClick="() => _isShowLineOrderId = !_isShowLineOrderId" />
         
         <MudGrid Class="mt-4">
             <MudItem xs="12" sm="3">
@@ -45,7 +55,15 @@
                 <MudButton Variant="Variant.Filled" Color="Color.Info"
                     OnClick="SendTestLineMessage" FullWidth
                     StartIcon="@Icons.Material.Filled.NotificationAdd">
-                    手動發送Line統計
+                    手動發送Line統計(每日訂餐)
+                </MudButton>
+            </MudItem>
+
+            <MudItem xs="12" sm="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Success"
+                    OnClick="SendTestNotifyOrderLineMessage" FullWidth
+                    StartIcon="@Icons.Material.Filled.NotificationAdd">
+                    手動發送Line通知(每月通知訂餐)
                 </MudButton>
             </MudItem>
         </MudGrid>
@@ -56,8 +74,10 @@
 @code {
     private bool _isShowLineAccessToken = false;
     private bool _isShowLineId = false;
+    private bool _isShowLineOrderId = false;
     private string? _lineAccessToken = string.Empty;
     private string? _lineId = string.Empty;
+    private string? _lineOrderId = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,6 +95,13 @@
                 Value = _lineId ?? string.Empty
             };
             await BentoDbService.SaveConfigAsync(lineId);
+
+            SystemConfig lineOrderId = new()
+            {
+                Key = "LineOrderId",
+                Value = _lineOrderId ?? string.Empty
+            };
+            await BentoDbService.SaveConfigAsync(lineOrderId);
 
             SystemConfig lineAccessToken = new()
             {
@@ -105,6 +132,10 @@
             _lineId = configs.FirstOrDefault(
                 c => c.Key == "LineId"
             )?.Value ?? string.Empty;
+
+            _lineOrderId = configs.FirstOrDefault(
+                c => c.Key == "LineOrderId"
+            )?.Value ?? string.Empty;
         }
     }
 
@@ -113,6 +144,21 @@
         try
         {
             await BentoReportService.ProcessAndSendReportAsync();
+            Snackbar.Add(
+                "✅ LINE 統計訊息已成功發送！", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"❌ 發送失敗：{ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SendTestNotifyOrderLineMessage()
+    {
+        try
+        {
+            await BentoReportService.SendNotifyOrderMessageAsync();
             Snackbar.Add(
                 "✅ LINE 統計訊息已成功發送！", Severity.Success);
         }

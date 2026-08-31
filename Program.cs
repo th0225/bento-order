@@ -38,6 +38,8 @@ builder.Services.AddSingleton<IMealProvider, MealProvider>();
 
 builder.Services.AddHostedService<OrderReportService>();
 
+builder.Services.AddHostedService<NotifyOrderService>();
+
 builder.Services.AddServerSideBlazor().AddHubOptions(options =>
 {
     options.MaximumReceiveMessageSize = 10 * 1024 * 1024;

@@ -5,10 +5,32 @@
 @inject BentoDbService BentoDbService
 @inject GlobalState GlobalState
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 @* 使用者自己的訂餐月曆 *@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 pb-8">
-    <MonthCalendar Month="_month" MonthChanged="OnMonthChanged">
+    <MonthCalendar Month="_month" MonthChanged="OnMonthChanged"
+        ScrollToTodayOnMobile="true">
+        <HeaderActions>
+            @* 電腦版：文字按鈕；手機版：只有圖示，避免標題列太擠 *@
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                Class="d-none d-sm-flex"
+                StartIcon="@Icons.Material.Filled.EventRepeat"
+                Disabled="@(_mealTypes.Count == 0)"
+                OnClick="OpenBatchOrderAsync">
+                批次訂餐
+            </MudButton>
+            @* 用 div 控制顯示：MudTooltip 的 Class 不會套在外層，d-sm-none 無效 *@
+            <div class="d-flex d-sm-none">
+                <MudTooltip Text="批次訂餐">
+                    <MudIconButton Icon="@Icons.Material.Filled.EventRepeat"
+                        Color="Color.Primary" Variant="Variant.Filled"
+                        Size="Size.Small"
+                        Disabled="@(_mealTypes.Count == 0)"
+                        OnClick="OpenBatchOrderAsync" />
+                </MudTooltip>
+            </div>
+        </HeaderActions>
         <CellTemplate Context="date">
             <CalendarCell Date="date"
                 TargetUserId="@GlobalState.CurrentUser!.Id"
@@ -49,6 +71,30 @@
     {
         _month = month;
         await LoadMonthDataAsync();
+    }
+
+    // 批次訂餐（套用到目前顯示的月份），完成後重新讀取
+    private async Task OpenBatchOrderAsync()
+    {
+        var parameters = new DialogParameters<BatchOrderDialog>
+        {
+            { x => x.Month, _month },
+            { x => x.MealTypes, _mealTypes }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<BatchOrderDialog>(
+            "", parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await LoadMonthDataAsync();
+        }
     }
 
     // 取得整月份資料

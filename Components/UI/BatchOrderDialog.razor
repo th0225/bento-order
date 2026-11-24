@@ -1,0 +1,126 @@
+@using bento_order.Services
+
+@inject BentoDbService BentoDbService
+@inject GlobalState GlobalState
+@inject ISnackbar Snackbar
+
+@* 批次訂餐：把餐點套用到本月指定星期幾的所有可訂日子 *@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight: bold;">
+            批次訂餐：@Month.ToString("yyyy 年 M 月")
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudSelect T="string" @bind-Value="_meal" Label="餐點 1"
+            Variant="Variant.Outlined" Margin="Margin.Dense">
+            @foreach (var type in MealTypes)
+            {
+                <MudSelectItem Value="@type" />
+            }
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="_addMeal" Label="餐點 2（可不選）"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4"
+            Clearable>
+            @foreach (var type in MealTypes)
+            {
+                <MudSelectItem Value="@type" />
+            }
+        </MudSelect>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4">套用在每週的</MudText>
+        <MudChipSet T="DayOfWeek" @bind-SelectedValues="_days"
+            SelectionMode="SelectionMode.MultiSelection" CheckMark
+            Color="Color.Primary" Variant="Variant.Outlined">
+            @foreach (var (day, label) in DayLabels)
+            {
+                <MudChip Value="day" Text="@label" />
+            }
+        </MudChipSet>
+
+        <MudSwitch @bind-Value="_overwrite" Color="Color.Warning" Class="mt-2"
+            Label="覆蓋已經訂好的日子" />
+
+        <MudText Typo="Typo.caption" Class="d-block mt-2">
+            已截止、已鎖定的日子會自動略過；週末只有管理員開放的補班日才會套用。
+        </MudText>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+            OnClick="ApplyAsync" Disabled="@(!CanApply || _isSaving)">
+            套用
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private static readonly (DayOfWeek Day, string Label)[] DayLabels =
+    [
+        (DayOfWeek.Monday, "一"), (DayOfWeek.Tuesday, "二"),
+        (DayOfWeek.Wednesday, "三"), (DayOfWeek.Thursday, "四"),
+        (DayOfWeek.Friday, "五"), (DayOfWeek.Saturday, "六"),
+        (DayOfWeek.Sunday, "日")
+    ];
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    // 要套用的月份（只看年、月）
+    [Parameter]
+    public DateTime Month { get; set; }
+
+    // 可選的餐點種類
+    [Parameter]
+    public IReadOnlyList<string> MealTypes { get; set; } = [];
+
+    private string _meal = string.Empty;
+    private string _addMeal = string.Empty;
+    private IReadOnlyCollection<DayOfWeek> _days =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday
+    ];
+    private bool _overwrite;
+    private bool _isSaving;
+
+    private bool CanApply => !string.IsNullOrEmpty(_meal) && _days.Count > 0;
+
+    private async Task ApplyAsync()
+    {
+        _isSaving = true;
+        try
+        {
+            var result = await BentoDbService.BatchUpsertOrdersAsync(
+                GlobalState.CurrentUser!.Id, Month.Year, Month.Month, _days,
+                _meal, _addMeal ?? string.Empty, _overwrite);
+
+            var message = $"已套用 {result.Applied} 天";
+            if (result.SkippedLocked > 0)
+            {
+                message += $"，略過 {result.SkippedLocked} 天已截止或鎖定";
+            }
+            if (result.SkippedExisting > 0)
+            {
+                message += $"，{result.SkippedExisting} 天已有訂單未變更";
+            }
+
+            Snackbar.Add(message,
+                result.Applied > 0 ? Severity.Success : Severity.Info);
+            MudDialog.Close(DialogResult.Ok(result.Applied));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"批次訂餐失敗：{ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

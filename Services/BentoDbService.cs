@@ -278,6 +278,101 @@ public class BentoDbService
         Option = item?.Option ?? string.Empty
     };
 
+    // 批次訂餐的結果：套用天數、因截止/鎖定略過、因已有訂單略過
+    public record BatchOrderResult(int Applied, int SkippedLocked,
+        int SkippedExisting);
+
+    // 批次訂餐：把餐點套用到某月份中指定星期幾的所有日子。
+    // 一律依 OrderLockPolicy 略過已截止或鎖定的日子（管理員也一樣，
+    // 避免誤改過去的訂單；管理員可個別修改）。
+    // overwrite = false 時，已經有訂餐的日子不變。
+    public async Task<BatchOrderResult> BatchUpsertOrdersAsync(int userId,
+        int year, int month, IReadOnlyCollection<DayOfWeek> daysOfWeek,
+        string mealName, string addMealName, bool overwrite)
+    {
+        mealName = mealName?.Trim() ?? string.Empty;
+        addMealName = addMealName?.Trim() ?? string.Empty;
+
+        if (mealName.Length == 0)
+        {
+            throw new InvalidOperationException("請選擇餐點 1。");
+        }
+
+        var start = new DateTime(year, month, 1);
+        var end = start.AddMonths(1);
+
+        using var db = _dbFactory.CreateDbContext();
+
+        if (!await db.Users.AnyAsync(u => u.Id == userId))
+        {
+            throw new InvalidOperationException("使用者不存在。");
+        }
+
+        var names = new[] { mealName, addMealName }
+            .Where(n => n.Length > 0).Distinct().ToList();
+        var validCount = await db.MealTypes.CountAsync(m => names.Contains(m.Name));
+        if (validCount != names.Count)
+        {
+            throw new InvalidOperationException("選擇的餐點不存在，請重新整理頁面。");
+        }
+
+        var locks = await db.LockedDates
+            .Where(d => d.Date >= start && d.Date < end)
+            .ToListAsync();
+        var orders = await db.Orders
+            .Where(o => o.UserId == userId &&
+                o.OrderDate >= start && o.OrderDate < end)
+            .ToListAsync();
+
+        var now = AppTime.Now;
+        int applied = 0, skippedLocked = 0, skippedExisting = 0;
+
+        for (var date = start; date < end; date = date.AddDays(1))
+        {
+            if (!daysOfWeek.Contains(date.DayOfWeek))
+            {
+                continue;
+            }
+
+            var lockRecord = locks.FirstOrDefault(d => d.Date == date);
+            if (OrderLockPolicy.IsLocked(date, now, lockRecord))
+            {
+                skippedLocked++;
+                continue;
+            }
+
+            var existing = orders.FirstOrDefault(o => o.OrderDate == date);
+            if (existing != null && existing.HasMeal && !overwrite)
+            {
+                skippedExisting++;
+                continue;
+            }
+
+            if (existing == null)
+            {
+                db.Orders.Add(new Order
+                {
+                    UserId = userId,
+                    OrderDate = date,
+                    BentoItem = new() { Name = mealName },
+                    AdditionalBentoItem = new() { Name = addMealName }
+                });
+            }
+            else
+            {
+                existing.BentoItem ??= new();
+                existing.BentoItem.Name = mealName;
+                existing.AdditionalBentoItem ??= new();
+                existing.AdditionalBentoItem.Name = addMealName;
+            }
+
+            applied++;
+        }
+
+        await db.SaveChangesAsync();
+        return new BatchOrderResult(applied, skippedLocked, skippedExisting);
+    }
+
     public async Task<Order?> GetOrderByUserAsync(int userId, DateTime date)
     {
         using var db = _dbFactory.CreateDbContext();

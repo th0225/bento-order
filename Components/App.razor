@@ -93,6 +93,125 @@
                 throw e;
             }
         };
+
+        // 菜單圖片縮放（MenuDialog 使用）：滾輪、雙指捏合、雙擊、按鈕縮放，拖曳移動。
+        // 縮放倍率 1 = 整張圖完整顯示在容器內
+        window.bentoZoom = {
+            attach: (container) => {
+                const img = container.querySelector('img');
+                if (!img || container._zoom) return;
+
+                const state = { scale: 1, min: 1, max: 5, base: 0 };
+                container._zoom = state;
+
+                // 計算「完整顯示」時的圖片寬度
+                const fit = () => {
+                    if (!img.naturalWidth) return;
+                    // 先縮小圖片讓捲軸消失，才量得到完整的可用空間
+                    img.style.width = '0px';
+                    state.base = Math.min(container.clientWidth,
+                        container.clientHeight * img.naturalWidth / img.naturalHeight);
+                    img.style.width = (state.base * state.scale) + 'px';
+                };
+
+                // 以容器內的 (cx, cy) 為中心縮放，沒給則以中心點
+                state.apply = (newScale, cx, cy) => {
+                    newScale = Math.min(state.max, Math.max(state.min, newScale));
+                    cx ??= container.clientWidth / 2;
+                    cy ??= container.clientHeight / 2;
+                    const fx = (container.scrollLeft + cx) / state.scale;
+                    const fy = (container.scrollTop + cy) / state.scale;
+                    state.scale = newScale;
+                    img.style.width = (state.base * newScale) + 'px';
+                    container.scrollLeft = fx * newScale - cx;
+                    container.scrollTop = fy * newScale - cy;
+                };
+
+                const point = (clientX, clientY) => {
+                    const r = container.getBoundingClientRect();
+                    return [clientX - r.left, clientY - r.top];
+                };
+
+                // 圖片可能已載入（快取）或還在載入，兩種情況都要計算
+                img.addEventListener('load', fit);
+                fit();
+                new ResizeObserver(fit).observe(container);
+
+                // 滑鼠滾輪縮放
+                container.addEventListener('wheel', e => {
+                    e.preventDefault();
+                    state.apply(state.scale * (e.deltaY < 0 ? 1.2 : 1 / 1.2),
+                        ...point(e.clientX, e.clientY));
+                }, { passive: false });
+
+                // 雙擊：原始大小 ↔ 放大
+                container.addEventListener('dblclick', e => {
+                    state.apply(state.scale > 1 ? 1 : 2.5,
+                        ...point(e.clientX, e.clientY));
+                });
+
+                // 手機雙指捏合縮放（單指仍是原生捲動）
+                let pinch = null;
+                const distance = t => Math.hypot(
+                    t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+                container.addEventListener('touchstart', e => {
+                    if (e.touches.length === 2) {
+                        pinch = { dist: distance(e.touches), scale: state.scale };
+                    }
+                }, { passive: true });
+                container.addEventListener('touchmove', e => {
+                    if (pinch && e.touches.length === 2) {
+                        e.preventDefault();
+                        const t = e.touches;
+                        state.apply(pinch.scale * distance(t) / pinch.dist,
+                            ...point((t[0].clientX + t[1].clientX) / 2,
+                                (t[0].clientY + t[1].clientY) / 2));
+                    }
+                }, { passive: false });
+                container.addEventListener('touchend', e => {
+                    if (e.touches.length < 2) pinch = null;
+                });
+
+                // 電腦版按住拖曳移動（只在拖曳期間監聽 window，避免累積監聽器）
+                container.addEventListener('mousedown', e => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    const start = { x: e.clientX, y: e.clientY,
+                        left: container.scrollLeft, top: container.scrollTop };
+                    container.classList.add('dragging');
+
+                    const move = ev => {
+                        container.scrollLeft = start.left - (ev.clientX - start.x);
+                        container.scrollTop = start.top - (ev.clientY - start.y);
+                    };
+                    const up = () => {
+                        container.classList.remove('dragging');
+                        window.removeEventListener('mousemove', move);
+                        window.removeEventListener('mouseup', up);
+                    };
+                    window.addEventListener('mousemove', move);
+                    window.addEventListener('mouseup', up);
+                });
+            },
+
+            // 按鈕：factor > 1 放大、< 1 縮小
+            zoom: (container, factor) =>
+                container?._zoom?.apply(container._zoom.scale * factor),
+
+            reset: (container) => container?._zoom?.apply(1)
+        };
+
+        // 月曆（MonthCalendar 使用）：手機條列式時捲到指定日期。
+        // 960px 與 MonthCalendar.razor.css 切換成條列式的斷點相同
+        window.bentoCalendar = {
+            scrollToDayOnMobile: (id, smooth) => {
+                if (!window.matchMedia('(max-width: 960px)').matches) return;
+                document.getElementById(id)?.scrollIntoView({
+                    block: 'start',
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+            }
+        };
     </script>
 </body>
 

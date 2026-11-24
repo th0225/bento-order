@@ -1,5 +1,6 @@
 @using System.Globalization
 @using bento_order.Services
+@inject IJSRuntime JS
 
 @* 月曆版面（標題、切換月份、星期列、日期格），格子內容由 CellTemplate 決定 *@
 
@@ -17,12 +18,18 @@
 
         <MudSpacer />
 
+        @* 頁面自訂的操作按鈕（例如批次訂餐），放在切換月份按鈕左邊 *@
+        @if (HeaderActions != null)
+        {
+            <div class="header-actions">@HeaderActions</div>
+        }
+
         <div class="nav-controls">
             <MudIconButton Color="Color.Inherit"
                 Icon="@Icons.Material.Filled.ArrowBackIosNew"
                 OnClick="@(() => ChangeMonthAsync(Month.AddMonths(-1)))" />
             <MudButton Variant="Variant.Text" Style="font-weight: bold;"
-                OnClick="@(() => ChangeMonthAsync(AppTime.Today))">
+                OnClick="GoToTodayAsync">
                 今天
             </MudButton>
             <MudIconButton Color="Color.Inherit"
@@ -48,7 +55,9 @@
     @for (int d = 1; d <= DaysInMonth; d++)
     {
         var date = new DateTime(Month.Year, Month.Month, d);
-        <div @key="date">@CellTemplate(date)</div>
+        <div @key="date" id="@DayElementId(date)" class="calendar-day">
+            @CellTemplate(date)
+        </div>
     }
 </div>
 </div>
@@ -68,6 +77,10 @@
     [Parameter]
     public EventCallback<DateTime> MonthChanged { get; set; }
 
+    // 標題卡片內的額外操作按鈕（可選）
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
     // 每一天的格子內容
     [Parameter]
     [EditorRequired]
@@ -77,6 +90,55 @@
     private int EmptyDaysBefore =>
         (int)new DateTime(Month.Year, Month.Month, 1).DayOfWeek;
 
+    // 手機版（條列式）開啟時自動捲到今天
+    [Parameter]
+    public bool ScrollToTodayOnMobile { get; set; }
+
+    // 下次渲染完成後要捲到今天（null = 不捲；值 = 是否平滑捲動）
+    private bool? _pendingScrollSmooth;
+
+    private static string DayElementId(DateTime date) =>
+        $"calendar-day-{date:yyyy-MM-dd}";
+
+    private bool IsCurrentMonth =>
+        Month.Year == AppTime.Today.Year && Month.Month == AppTime.Today.Month;
+
     private Task ChangeMonthAsync(DateTime month) =>
         MonthChanged.InvokeAsync(new DateTime(month.Year, month.Month, 1));
+
+    private async Task GoToTodayAsync()
+    {
+        if (ScrollToTodayOnMobile)
+        {
+            _pendingScrollSmooth = true;
+        }
+
+        await ChangeMonthAsync(AppTime.Today);
+        // 已經在本月時參數不會變，自己觸發一次渲染以執行捲動
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ScrollToTodayOnMobile && IsCurrentMonth)
+        {
+            _pendingScrollSmooth = false;
+        }
+
+        if (_pendingScrollSmooth is not { } smooth || !IsCurrentMonth)
+        {
+            return;
+        }
+
+        _pendingScrollSmooth = null;
+        try
+        {
+            await JS.InvokeVoidAsync("bentoCalendar.scrollToDayOnMobile",
+                DayElementId(AppTime.Today), smooth);
+        }
+        catch (JSException)
+        {
+            // 捲動失敗不影響使用
+        }
+    }
 }

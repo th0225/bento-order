@@ -1,0 +1,42 @@
+/* MenuDialog 專屬樣式（CSS isolation） */
+
+.zoom-toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+/* 固定高度的檢視區，放大後以捲動/拖曳移動 */
+.zoom-container {
+    height: 70vh;
+    overflow: auto;
+    border-radius: 12px;
+    background-color: #F3EEE7;
+    cursor: grab;
+    /* 單指交給瀏覽器捲動，雙指捏合由程式處理 */
+    touch-action: pan-x pan-y;
+    overscroll-behavior: contain;
+}
+
+.zoom-container.dragging {
+    cursor: grabbing;
+}
+
+.zoom-container img {
+    display: block;
+    margin: auto;
+    max-width: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.zoom-hint {
+    color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 600px) {
+    .zoom-container {
+        height: 65vh;
+    }
+}

@@ -23,6 +23,17 @@
     padding-bottom: 8px;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    margin-right: 8px;
+}
+
+/* 捲到某一天時，避開上方固定的 AppBar（64px） */
+.calendar-day {
+    scroll-margin-top: 76px;
+}
+
 /* 手機版：改成條列式 */
 @media (max-width: 960px) {
     .weekday-header,

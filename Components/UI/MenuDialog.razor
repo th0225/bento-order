@@ -1,20 +1,42 @@
+@inject IJSRuntime JS
+
+@* 本月菜單：可縮放（滾輪、雙指、雙擊、按鈕）與拖曳移動，邏輯在 App.razor 的 bentoZoom *@
 <MudDialog Style="background-color: #FFFDF7; border-radius: 20px;">
     <DialogContent>
-        <div class="d-flex justify-center">
-            @if (string.IsNullOrEmpty(ImageUrl))
-            {
+        @if (string.IsNullOrEmpty(ImageUrl))
+        {
+            <div class="d-flex justify-center">
                 <MudAlert Severity="Severity.Info">
                     尚未上傳菜單
                 </MudAlert>
-            }
-            else
-            {
-                <MudImage Src="@ImageUrl"
-                    Alt="本月菜單" Elevation="4" Class="rounded-lg"
-                    Style="max-width: 100%; max-height: 80vh;
-                        object-fit: contain;" />
-            }
-        </div>
+            </div>
+        }
+        else
+        {
+            <div class="zoom-toolbar">
+                <MudTooltip Text="縮小">
+                    <MudIconButton Icon="@Icons.Material.Filled.ZoomOut"
+                        OnClick="@(() => ZoomAsync(1 / ZoomStep))" />
+                </MudTooltip>
+                <MudTooltip Text="完整顯示">
+                    <MudIconButton Icon="@Icons.Material.Filled.FitScreen"
+                        OnClick="ResetAsync" />
+                </MudTooltip>
+                <MudTooltip Text="放大">
+                    <MudIconButton Icon="@Icons.Material.Filled.ZoomIn"
+                        OnClick="@(() => ZoomAsync(ZoomStep))" />
+                </MudTooltip>
+            </div>
+
+            <div class="zoom-container" @ref="_container">
+                <img src="@ImageUrl" alt="本月菜單" draggable="false" />
+            </div>
+
+            <MudText Typo="Typo.caption" Align="Align.Center"
+                Class="d-block mt-1 zoom-hint">
+                滾輪或雙指縮放、雙擊放大，拖曳可移動
+            </MudText>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" OnClick="Close"
@@ -26,11 +48,48 @@
 </MudDialog>
 
 @code {
+    private const double ZoomStep = 1.5;
+
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = default!;
 
     [Parameter]
     public string? ImageUrl { get; set; }
+
+    private ElementReference _container;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(ImageUrl))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("bentoZoom.attach", _container);
+            }
+            catch (JSException)
+            {
+                // 縮放功能失效時仍可看圖，不影響使用
+            }
+        }
+    }
+
+    private async Task ZoomAsync(double factor)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("bentoZoom.zoom", _container, factor);
+        }
+        catch (JSException) { }
+    }
+
+    private async Task ResetAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("bentoZoom.reset", _container);
+        }
+        catch (JSException) { }
+    }
 
     private void Close() => MudDialog.Close();
 }

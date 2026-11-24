@@ -24,43 +24,123 @@ public class BentoDbService
             u => u.Username == username
         );
 
-        if (user == null)
+        if (user == null || !VerifyPassword(user, password))
         {
             return null;
         }
 
-        var verificationResult = PasswordVerificationResult.Failed;
-        try
-        {
-            verificationResult = _passwordHasher.VerifyHashedPassword(
-                user,
-                user.PasswordHash,
-                password
-            );
-        }
-        catch (FormatException) {}
-
-        if (verificationResult == PasswordVerificationResult.Success ||
-            verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
-        {
-            if (verificationResult ==
+        // 舊的明碼密碼或需要重新雜湊時，順便更新成新的雜湊
+        if (user.PasswordHash == password ||
+            _passwordHasher.VerifyHashedPassword(
+                user, user.PasswordHash, password) ==
                 PasswordVerificationResult.SuccessRehashNeeded)
-            {
-                user.PasswordHash = _passwordHasher.HashPassword(
-                    user,
-                    password
-                );
-                await db.SaveChangesAsync();
-            }
-
-            return user;
-        }
-
-        if (user.PasswordHash == password)
         {
             user.PasswordHash = _passwordHasher.HashPassword(user, password);
             await db.SaveChangesAsync();
-            return user;
+        }
+
+        return user;
+    }
+
+    // 驗證密碼（相容早期以明碼儲存的密碼）
+    private bool VerifyPassword(User user, string password)
+    {
+        try
+        {
+            var result = _passwordHasher.VerifyHashedPassword(
+                user, user.PasswordHash, password);
+
+            if (result != PasswordVerificationResult.Failed)
+            {
+                return true;
+            }
+        }
+        catch (FormatException) {}
+
+        return user.PasswordHash == password;
+    }
+
+    // 取得單一使用者
+    public async Task<User?> GetUserAsync(int userId)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        return await db.Users.FindAsync(userId);
+    }
+
+    // 使用者是否仍存在（被刪除的使用者 cookie 需失效）
+    public async Task<bool> UserExistsAsync(int userId)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        return await db.Users.AnyAsync(u => u.Id == userId);
+    }
+
+    // 修改自己的密碼，成功回傳 null，失敗回傳錯誤訊息
+    public async Task<string?> ChangePasswordAsync(int userId,
+        string currentPassword, string newPassword)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        var user = await db.Users.FindAsync(userId);
+
+        if (user == null)
+        {
+            return "找不到使用者";
+        }
+
+        if (!VerifyPassword(user, currentPassword))
+        {
+            return "目前密碼錯誤";
+        }
+
+        if (currentPassword == newPassword)
+        {
+            return "新密碼不能與目前密碼相同";
+        }
+
+        var error = ValidateNewPassword(newPassword);
+        if (error != null)
+        {
+            return error;
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        user.MustChangePassword = false;
+        await db.SaveChangesAsync();
+
+        return null;
+    }
+
+    // 管理員重設使用者密碼（不強制使用者修改）
+    public async Task<string?> ResetPasswordAsync(int userId,
+        string newPassword)
+    {
+        var error = ValidateNewPassword(newPassword);
+        if (error != null)
+        {
+            return error;
+        }
+
+        using var db = _dbFactory.CreateDbContext();
+        var user = await db.Users.FindAsync(userId);
+
+        if (user == null)
+        {
+            return "找不到使用者";
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        await db.SaveChangesAsync();
+
+        return null;
+    }
+
+    public const int MinPasswordLength = 6;
+
+    private static string? ValidateNewPassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password) ||
+            password.Length < MinPasswordLength)
+        {
+            return $"密碼至少需要 {MinPasswordLength} 個字元";
         }
 
         return null;
@@ -101,6 +181,14 @@ public class BentoDbService
         var user = await db.Users.FindAsync(userId);
         if (user != null && user.Role != "Admin")
         {
+            // 一併刪除今天以後的訂單，避免離職者的訂單繼續計入統計；
+            // 過去的訂單保留，以免已結算的歷史數量改變
+            var futureOrders = await db.Orders
+                .Where(o => o.UserId == userId &&
+                    o.OrderDate >= DateTime.Today)
+                .ToListAsync();
+            db.Orders.RemoveRange(futureOrders);
+
             db.Users.Remove(user);
             await db.SaveChangesAsync();
         }
@@ -115,19 +203,20 @@ public class BentoDbService
         order.OrderDate = orderDate;
         using var db = _dbFactory.CreateDbContext();
 
+        if (!await db.Users.AnyAsync(u => u.Id == order.UserId))
+        {
+            throw new InvalidOperationException("使用者不存在。");
+        }
+
         if (!isAdmin)
         {
-            var isManuallyLocked = await db.LockedDates.AnyAsync(d =>
-                d.Date.Date == orderDate && d.IsLocked
+            var lockRecord = await db.LockedDates.FirstOrDefaultAsync(d =>
+                d.Date >= orderDate && d.Date < orderDate.AddDays(1)
             );
 
-            if (orderDate < now.Date ||
-                (orderDate == now.Date && now.Hour >= 9) ||
-                orderDate.DayOfWeek == DayOfWeek.Saturday ||
-                orderDate.DayOfWeek == DayOfWeek.Sunday ||
-                isManuallyLocked)
+            if (OrderLockPolicy.IsLocked(orderDate, now, lockRecord))
             {
-                throw new UnauthorizedAccessException("您沒有權限在截止後修改訂單。");
+                throw new UnauthorizedAccessException("此日期已截止或鎖定，無法修改訂單。");
             }
         }
 

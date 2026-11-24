@@ -102,6 +102,9 @@ namespace bento_order.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -129,6 +132,7 @@ namespace bento_order.Migrations
                         new
                         {
                             Id = 1,
+                            MustChangePassword = true,
                             PasswordHash = "admin",
                             RealName = "",
                             Role = "Admin",

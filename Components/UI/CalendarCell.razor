@@ -229,10 +229,11 @@
     private Order _internalOrder = new();
     private CancellationTokenSource? _cts;
     private bool IsToday => Date.Date == DateTime.Today;
-    // 資料庫上鎖
-    private bool _isDatabaseLocked = false;
     // 最終上鎖
     private bool _isFinalLocked = false;
+    // 最後一次成功儲存的餐點，儲存失敗時還原
+    private string _savedBentoName = string.Empty;
+    private string _savedAddBentoName = string.Empty;
 
     // 初始化
     protected override void OnInitialized()
@@ -301,36 +302,45 @@
             };
         }
 
-        _isFinalLocked = IsSystemLocked();
+        _savedBentoName = _internalOrder.BentoItem?.Name ?? string.Empty;
+        _savedAddBentoName =
+            _internalOrder.AdditionalBentoItem?.Name ?? string.Empty;
 
-        if (LockedDate != null)
-        {
-            _isDatabaseLocked = LockedDate.IsLocked;
-            _isFinalLocked = _isDatabaseLocked;
-        }
-
-        if (IsEditMode)
-        {
-            _isFinalLocked = false;
-        }
-
-        StateHasChanged();
+        _lockRecord = LockedDate;
+        // 編輯模式（管理員修改他人訂單）不受鎖定限制
+        _isFinalLocked = !IsEditMode && IsLockedNow();
     }
+
+    // 該日期在 LockedDates 的紀錄（管理員切換後就地更新）
+    private LockedDate? _lockRecord;
+
+    // 鎖定規則統一由 OrderLockPolicy 判斷（與伺服器端相同）
+    private bool IsLockedNow() =>
+        OrderLockPolicy.IsLocked(Date, DateTime.Now, _lockRecord);
 
     private async Task OnMealChanged(string value, string type)
     {
-        _internalOrder.UserId = GlobalState.IsAdmin ? 
-            GlobalState.FakeId : GlobalState.CurrentUser!.Id;
-        _internalOrder.OrderDate = Date;
-
         if (type == "normal")
         {
-            _internalOrder.BentoItem!.Name = value;
+            _internalOrder.BentoItem!.Name = value ?? string.Empty;
         }
         else
         {
-            _internalOrder.AdditionalBentoItem!.Name = value;
+            _internalOrder.AdditionalBentoItem!.Name = value ?? string.Empty;
         }
+
+        // 頁面開著時可能已超過截止時間，選餐當下再檢查一次
+        if (!GlobalState.IsAdmin && IsLockedNow())
+        {
+            _isFinalLocked = true;
+            RevertToSaved();
+            Snackbar.Add("已超過訂餐截止時間，無法修改", Severity.Warning);
+            return;
+        }
+
+        _internalOrder.UserId = GlobalState.IsAdmin ?
+            GlobalState.FakeId : GlobalState.CurrentUser!.Id;
+        _internalOrder.OrderDate = Date;
 
         await TriggerAutoSave();
     }
@@ -346,35 +356,36 @@
             await BentoDbService.UpsertOrderAsync(
                 _internalOrder, GlobalState.IsAdmin);
 
+            _savedBentoName = _internalOrder.BentoItem!.Name;
+            _savedAddBentoName = _internalOrder.AdditionalBentoItem!.Name;
             Snackbar.Add("資料已同步", Severity.Info);
-
-            await InvokeAsync(StateHasChanged);
         }
-        catch (TaskCanceledException) {}
+        catch (TaskCanceledException)
+        {
+            // 被下一次變更取代，由下一次負責儲存
+            return;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // 伺服器判定已截止或鎖定
+            _isFinalLocked = true;
+            RevertToSaved();
+            Snackbar.Add(ex.Message, Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            RevertToSaved();
+            Snackbar.Add($"儲存失敗：{ex.Message}", Severity.Error);
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
-    private bool IsSystemLocked()
+    // 還原成最後一次成功儲存的餐點
+    private void RevertToSaved()
     {
-        var now = DateTime.Now;
-        var today = now.Date;
-
-        if (Date < today)
-        {
-            return true;
-        }
-
-        if (Date.DayOfWeek == DayOfWeek.Saturday ||
-            Date.DayOfWeek == DayOfWeek.Sunday)
-        {
-            return true;
-        }
-
-        if (Date == today && now.Hour >= 9)
-        {
-            return true;
-        }
-
-        return false;
+        _internalOrder.BentoItem!.Name = _savedBentoName;
+        _internalOrder.AdditionalBentoItem!.Name = _savedAddBentoName;
     }
 
     private async Task OnManualToggleChanged(bool value)
@@ -390,10 +401,18 @@
             IsLocked = value
         };
 
-        await BentoDbService.SaveLockedDateAsync(lockedDate);
+        try
+        {
+            await BentoDbService.SaveLockedDateAsync(lockedDate);
+            _lockRecord = lockedDate;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"儲存失敗：{ex.Message}", Severity.Error);
+        }
 
-        _isDatabaseLocked = value;
-        _isFinalLocked = value;
+        // 過去日期與當天截止後，即使解鎖也維持鎖定
+        _isFinalLocked = IsLockedNow();
         StateHasChanged();
     }
 }

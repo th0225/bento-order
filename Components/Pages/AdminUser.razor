@@ -66,6 +66,11 @@
             <MudTd DataLabel="姓名">@context.RealName</MudTd>
             <MudTd DataLabel="權限">@context.Role</MudTd>
             <MudTd DataLabel="操作" Style="text-align: right">
+                <MudTooltip Text="重設密碼">
+                    <MudIconButton Icon="@Icons.Material.Filled.LockReset"
+                        Color="Color.Primary"
+                        OnClick="@(() => ResetPassword(context))" />
+                </MudTooltip>
                 @if (context.Role != "Admin")
                 {
                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
@@ -115,6 +120,49 @@
         else
         {
             Snackbar.Add("帳號已存在! ", Severity.Error);
+        }
+    }
+
+    // 重設密碼
+    private async Task ResetPassword(User user)
+    {
+        var parameters = new DialogParameters<ResetPasswordDialog>
+        {
+            { x => x.UserName, string.IsNullOrEmpty(user.RealName) ?
+                user.Username : user.RealName }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ResetPasswordDialog>(
+            "", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not { Canceled: false, Data: string password })
+        {
+            return;
+        }
+
+        try
+        {
+            var error = await BentoDbService.ResetPasswordAsync(
+                user.Id, password);
+
+            if (error != null)
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add("密碼已重設", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"重設失敗：{ex.Message}", Severity.Error);
         }
     }
 

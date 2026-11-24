@@ -87,6 +87,15 @@ public class GlobalState
         NotifyStateChanged();
     }
 
+    // 是否必須先修改密碼才能使用系統（由 MainLayout 從資料庫載入）
+    public bool MustChangePassword { get; private set; }
+
+    public void SetMustChangePassword(bool value)
+    {
+        MustChangePassword = value;
+        NotifyStateChanged();
+    }
+
     // 改變主題顏色時，通知所有UI元件更新
     public void SetDarkMode(bool isDark)
     {

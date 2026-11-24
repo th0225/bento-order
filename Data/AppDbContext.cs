@@ -49,7 +49,9 @@ public class AppDbContext : DbContext
                 Id = 1, 
                 Username = "admin",
                 PasswordHash = "admin",
-                Role = "Admin"
+                Role = "Admin",
+                // 預設密碼只能使用一次，登入後必須修改
+                MustChangePassword = true
             }
         );
     }

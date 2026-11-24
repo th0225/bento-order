@@ -54,6 +54,23 @@ builder.Services.AddAuthentication(options =>
 {
     options.Cookie.Name = "BentoOrderAuth";
     options.LoginPath = "/Login";
+
+    // 使用者被刪除後，原本的登入 cookie 立即失效
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        var userId = context.Principal?.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+        var dbService = context.HttpContext.RequestServices
+            .GetRequiredService<BentoDbService>();
+
+        if (!int.TryParse(userId, out var id) ||
+            !await dbService.UserExistsAsync(id))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme);
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -71,7 +88,14 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate(); 
+
+    // SQLite 不會自動建立資料夾，先確保資料庫檔所在的資料夾存在
+    var dataSource = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(
+        dbContext.Database.GetConnectionString()).DataSource;
+    var dbDir = Path.GetDirectoryName(Path.GetFullPath(dataSource));
+    if (!string.IsNullOrEmpty(dbDir)) Directory.CreateDirectory(dbDir);
+
+    dbContext.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.

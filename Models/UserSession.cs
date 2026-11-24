@@ -1,5 +1,6 @@
 namespace bento_order.Models;
 
+// 目前登入者（由登入 cookie 的 claims 建立）
 public class UserSession
 {
     public int Id { get; set; }
@@ -9,6 +10,4 @@ public class UserSession
     public string Realname { get; set; } = string.Empty;
     // 權限
     public string Role { get; set; } = string.Empty;
-    // 過期時間
-    public DateTime Expiry { get; set; }
 }

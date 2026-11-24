@@ -11,7 +11,6 @@ public class AppDbContext : DbContext
     // 註冊資料表
     public DbSet<User> Users => Set<User>();
     public DbSet<Order> Orders => Set<Order>();
-    public DbSet<MonthlyOrder> MonthlyMenus => Set<MonthlyOrder>();
     public DbSet<SystemConfig> SystemConfig => Set<SystemConfig>();
     public DbSet<LockedDate> LockedDates => Set<LockedDate>();
 
@@ -19,9 +18,18 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // 建立user id + 日期的複合索引，加速查詢
+        // 每人每天只能有一筆訂單（也用於加速查詢）
         modelBuilder.Entity<Order>()
-            .HasIndex(o => new { o.UserId, o.OrderDate });
+            .HasIndex(o => new { o.UserId, o.OrderDate })
+            .IsUnique();
+
+        // 設定鍵、鎖定日期不可重複
+        modelBuilder.Entity<SystemConfig>()
+            .HasIndex(c => c.Key)
+            .IsUnique();
+        modelBuilder.Entity<LockedDate>()
+            .HasIndex(d => d.Date)
+            .IsUnique();
 
         modelBuilder.Entity<Order>(entity =>
         {
@@ -49,7 +57,7 @@ public class AppDbContext : DbContext
                 Id = 1, 
                 Username = "admin",
                 PasswordHash = "admin",
-                Role = "Admin",
+                Role = Roles.Admin,
                 // 預設密碼只能使用一次，登入後必須修改
                 MustChangePassword = true
             }

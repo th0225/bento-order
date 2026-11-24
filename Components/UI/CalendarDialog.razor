@@ -1,7 +1,4 @@
-@using bento_order.Services
-
-@inject BentoDbService BentoDbService
-
+@* 管理員修改某位使用者某一天的訂單（不受鎖定限制） *@
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6" Style="font-weight: bold;">
@@ -10,7 +7,8 @@
     </TitleContent>
 
     <DialogContent>
-        <CalendarCell Date="Order.OrderDate" Order="Order" IsEditMode=true />
+        <CalendarCell Date="Date" TargetUserId="UserId" Order="Order"
+            IsEditMode="true" />
     </DialogContent>
 
     <DialogActions>
@@ -25,8 +23,17 @@
 
     [Parameter]
     public string Title { get; set; } = "標題";
+
+    // 要修改的使用者
     [Parameter]
-    public Order Order { get; set; } = new();
+    public int UserId { get; set; }
+
+    [Parameter]
+    public DateTime Date { get; set; }
+
+    // 該日已有的訂單，沒有則為 null
+    [Parameter]
+    public Order? Order { get; set; }
 
     void Submit() => MudDialog.Close(DialogResult.Ok(true));
 }

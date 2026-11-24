@@ -1,10 +1,16 @@
+namespace bento_order.Services;
+
+// 每天 09:05（台灣時間）推播當日訂餐統計
 public class OrderReportService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<OrderReportService> _logger;
 
-    public OrderReportService(IServiceProvider serviceProvider)
+    public OrderReportService(IServiceProvider serviceProvider,
+        ILogger<OrderReportService> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(
@@ -12,35 +18,30 @@ public class OrderReportService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.Now;
-            var targetTime = new DateTime(
-                now.Year, now.Month, now.Day, 9, 5, 0
-            );
+            var now = AppTime.Now;
+            var targetTime = now.Date.AddHours(9).AddMinutes(5);
 
-            if (now > targetTime)
+            if (now >= targetTime)
             {
                 targetTime = targetTime.AddDays(1);
             }
 
             var delay = targetTime - now;
-            Console.WriteLine($"[Bento] 下次發送時間：{targetTime}，等待 {delay.TotalHours:F2} 小時");
+            _logger.LogInformation("下次 LINE 統計發送時間：{Target}，等待 {Hours:F2} 小時",
+                targetTime, delay.TotalHours);
             await Task.Delay(delay, stoppingToken);
 
-            using (var scope = _serviceProvider.CreateScope())
+            using var scope = _serviceProvider.CreateScope();
+            try
             {
-                try
-                {
-                    var bentoService =
-                    scope.ServiceProvider.GetRequiredService<BentoReportService>();
-                    await bentoService.ProcessAndSendReportAsync();
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine(
-                        $"[Bento] LINE 統計發送失敗：{ex.Message}"
-                    );
-                }
-            };
+                var bentoService = scope.ServiceProvider
+                    .GetRequiredService<BentoReportService>();
+                await bentoService.ProcessAndSendReportAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LINE 統計發送失敗");
+            }
         }
     }
 }

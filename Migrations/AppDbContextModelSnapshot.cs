@@ -17,7 +17,7 @@ namespace bento_order.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
 
-            modelBuilder.Entity("LockedDate", b =>
+            modelBuilder.Entity("bento_order.Models.LockedDate", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -31,31 +31,10 @@ namespace bento_order.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Date")
+                        .IsUnique();
+
                     b.ToTable("LockedDates");
-                });
-
-            modelBuilder.Entity("bento_order.Models.MonthlyOrder", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("TotalOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("MonthlyMenus");
                 });
 
             modelBuilder.Entity("bento_order.Models.Order", b =>
@@ -72,7 +51,8 @@ namespace bento_order.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "OrderDate");
+                    b.HasIndex("UserId", "OrderDate")
+                        .IsUnique();
 
                     b.ToTable("Orders");
                 });
@@ -92,6 +72,9 @@ namespace bento_order.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
 
                     b.ToTable("SystemConfig");
                 });

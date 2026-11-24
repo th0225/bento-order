@@ -1,0 +1,38 @@
+/* MonthCalendar 專屬樣式（CSS isolation） */
+
+.month-calendar ::deep .shadow-cream {
+    box-shadow: 0 10px 30px rgba(121, 85, 72, 0.05);
+}
+
+.month-display {
+    border-left: 5px solid #FFCC80;
+    padding-left: 16px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+}
+
+.weekday-header {
+    text-align: center;
+    font-weight: 800;
+    color: #BCAA99;
+    font-size: 0.85rem;
+    padding-bottom: 8px;
+}
+
+/* 手機版：改成條列式 */
+@media (max-width: 960px) {
+    .weekday-header,
+    .empty-cell {
+        display: none;
+    }
+
+    .calendar-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+}

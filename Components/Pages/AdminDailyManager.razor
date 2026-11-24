@@ -1,12 +1,10 @@
 @page "/admin/daily-manager"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = Roles.Admin)]
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
-@inject GlobalState GlobalState
-@inject NavigationManager Navigation
 @inject IDialogService DialogService
-@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
     <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
@@ -52,14 +50,14 @@
             <MudTd DataLabel="操作">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                     Color="Color.Primary"
-                    OnClick="@(() => EditUserOrder(context, context.UserId))" />
+                    OnClick="@(() => EditUserOrder(context))" />
             </MudTd>
         </RowTemplate>
     </MudTable>
 </MudContainer>
 
 @code {
-    private DateTime? _selectedDate = DateTime.Today;
+    private DateTime? _selectedDate = AppTime.Today;
     private List<UserOrderDisplay> _userOrders = new();
 
     protected override async Task OnInitializedAsync()
@@ -75,50 +73,38 @@
 
     private async Task LoadData()
     {
-        if (_selectedDate.HasValue)
+        if (!_selectedDate.HasValue)
+        {
+            return;
+        }
+
+        try
         {
             _userOrders = await BentoDbService.GetDailyDetailAsync(
                 _selectedDate.Value
             );
-            StateHasChanged();
-        };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"讀取訂單失敗：{ex.Message}", Severity.Error);
+        }
     }
 
-    private async Task EditUserOrder(UserOrderDisplay item, int userId)
+    // 修改某位使用者在選定日期的訂單
+    private async Task EditUserOrder(UserOrderDisplay item)
     {
-        GlobalState.FakeId = userId;
-        Order? order = new();
-        if (_selectedDate.HasValue)
+        if (!_selectedDate.HasValue)
         {
-            order = await BentoDbService.GetOrderByUserAsync(
-              userId, _selectedDate.Value
-            );
-
-            if (order == null)
-            {
-                order = new();
-                order.UserId = userId;
-                order.OrderDate = _selectedDate.Value;
-
-                BentoItem bentoItem = new()
-                {
-                    Name = string.Empty
-                };
-                BentoItem addBentoItem = new()
-                {
-                    Name = string.Empty
-                };
-
-                order.BentoItem = bentoItem;
-                order.AdditionalBentoItem = addBentoItem;
-            }
+            return;
         }
 
         var parameters =
             new DialogParameters<CalendarDialog>
         {
-            { x => x.Title, "修改餐點" },
-            { x => x.Order, order }
+            { x => x.Title, $"修改餐點：{item.Username}" },
+            { x => x.UserId, item.UserId },
+            { x => x.Date, _selectedDate.Value.Date },
+            { x => x.Order, item.HasOrdered ? item.OrderData : null }
         };
 
         var options = new DialogOptions
@@ -131,11 +117,9 @@
             await DialogService.ShowAsync<CalendarDialog>(
             "", parameters, options
         );
-        
-        var result = await dialog.Result;
-        if (!result!.Canceled)
-        {
-            await LoadData();
-        }
+
+        // 不論按確定或關閉，訂單都已自動儲存，重新讀取
+        await dialog.Result;
+        await LoadData();
     }
 }

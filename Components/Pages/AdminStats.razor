@@ -1,11 +1,9 @@
 @page "/admin/stats"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = Roles.Admin)]
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
-@inject GlobalState GlobalState
-@inject NavigationManager Navigation
-@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
     <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
@@ -79,28 +77,26 @@
 </MudContainer>
 
 @code {
-    private DateTime? _selectedDate = DateTime.Today;
+    private DateTime? _selectedDate = AppTime.Today;
     private List<OrderCount>? _stats;
     private DateTime? _periodStart;
     private DateTime? _periodEnd;
     private int? _totalOrder;
 
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
+    // 結算週期：上月 26 日～本月 25 日；過了 25 日自動換到下一期
+    private const int PeriodEndDay = 25;
 
-        var now = DateTime.Today;
-        _periodStart = new DateTime(now.Year, now.Month, 26)
-            .AddMonths(-1);
-        _periodEnd = new DateTime(now.Year, now.Month, 25);
-    }
-
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
-        await base.OnParametersSetAsync();
+        var today = AppTime.Today;
+        var periodEndMonth = today.Day > PeriodEndDay
+            ? today.AddMonths(1) : today;
+        _periodEnd = new DateTime(periodEndMonth.Year, periodEndMonth.Month,
+            PeriodEndDay);
+        _periodStart = _periodEnd.Value.AddMonths(-1).AddDays(1);
+
         await LoadStats();
         await CalculateTotal();
-        StateHasChanged();
     }
 
     private async Task OnDateChanged(DateTime? newDate)
@@ -111,22 +107,40 @@
 
     private async Task LoadStats()
     {
-        if (_selectedDate.HasValue)
+        if (!_selectedDate.HasValue)
+        {
+            return;
+        }
+
+        try
         {
             _stats = await BentoDbService.GetDailyStatsAsync(
                 _selectedDate.Value
             );
-            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _stats = [];
+            Snackbar.Add($"讀取統計失敗：{ex.Message}", Severity.Error);
         }
     }
 
     private async Task CalculateTotal()
     {
-        if (_periodStart.HasValue && _periodEnd.HasValue)
+        if (!_periodStart.HasValue || !_periodEnd.HasValue)
+        {
+            return;
+        }
+
+        try
         {
             _totalOrder = await BentoDbService.GetPeriodTotalCountAsync(
                 _periodStart.Value, _periodEnd.Value
             );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"計算失敗：{ex.Message}", Severity.Error);
         }
     }
 }

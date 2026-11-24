@@ -5,8 +5,7 @@
 @inject ISnackbar Snackbar
 @inject GlobalState GlobalState
 
-<div class="cell-wrapper shadow-soft 
-    @(_isFinalLocked ? "cell-locked" : "weekday")">
+<div class="cell-wrapper @(_isFinalLocked ? "cell-locked" : "")">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
         <div class="lock-overlay">
@@ -25,308 +24,107 @@
         }
     </div>
 
-    <div class="@(_isFinalLocked ? "rest-mode" : "cell-body")">
-        <div class="meal-section">
-            <div class="section-label">餐點1</div>
-            <div class="select-group">
-                <MudSelect T="string" Placeholder="餐點" Dense Clearable
-                    Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2" Disabled="@_isFinalLocked"
-                    Value="@(Order!.BentoItem!.Name ?? string.Empty)"
-                    ValueChanged="@((string val) => 
-                        OnMealChanged(val, "normal"))">
-                    @foreach (var type in MealProvider.GetMealTypes())
-                    {
-                        <MudSelectItem Value="@type" />
-                    }
-                </MudSelect>
+    @if (ShowMeals)
+    {
+        <div class="@(_isFinalLocked ? "rest-mode" : "cell-body")">
+            <div class="meal-section">
+                <div class="section-label">餐點1</div>
+                <div class="select-group">
+                    <MudSelect T="string" Placeholder="餐點" Dense Clearable
+                        Variant="Variant.Text" Margin="Margin.Dense"
+                        Class="flex-grow-2" Disabled="@_isFinalLocked"
+                        Value="@_bentoName"
+                        ValueChanged="@((string val) =>
+                            OnMealChanged(val, isAdditional: false))">
+                        @foreach (var type in MealProvider.GetMealTypes())
+                        {
+                            <MudSelectItem Value="@type" />
+                        }
+                    </MudSelect>
+                </div>
+            </div>
+
+            <div class="meal-section">
+                <div class="section-label">餐點2</div>
+                <div class="select-group">
+                    <MudSelect T="string" Placeholder="餐點" Dense Clearable
+                        Variant="Variant.Text" Margin="Margin.Dense"
+                        Class="flex-grow-2" Disabled="@_isFinalLocked"
+                        Value="@_addBentoName"
+                        ValueChanged="@((string val) =>
+                            OnMealChanged(val, isAdditional: true))">
+                        @foreach (var type in MealProvider.GetMealTypes())
+                        {
+                            <MudSelectItem Value="@type" />
+                        }
+                    </MudSelect>
+                </div>
             </div>
         </div>
-
-        <div class="meal-section">
-            <div class="section-label">餐點2</div>
-            <div class="select-group">
-                <MudSelect T="string" Placeholder="餐點" Dense Clearable
-                    Variant="Variant.Text" Margin="Margin.Dense"
-                    Class="flex-grow-2" Disabled="@_isFinalLocked"
-                    Value="@(Order!.AdditionalBentoItem!.Name ?? string.Empty)"
-                    ValueChanged="@((string val) => 
-                        OnMealChanged(val, "add"))">
-                    @foreach (var type in MealProvider.GetMealTypes())
-                    {
-                        <MudSelectItem Value="@type" />
-                    }
-                </MudSelect>
-            </div>
-        </div>
-    </div>
-
+    }
 </div>
-
-<style>
-    .cell-wrapper {
-        min-height: 160px;
-        display: flex;
-        flex-direction: column;
-        padding: 8px;
-        border-radius: 16px;
-        transition: transform 0.2s;
-        background-color: #FFFFFF;
-        box-shadow: 0 4px 12px rgba(93, 64, 55, 0.06); 
-        border: 1px solid #EAE4DD;
-    }
-    /* 滑鼠移入格子的效果 */
-    .cell-wrapper:hover { 
-        border-color: #FFA726;
-        box-shadow: 0 8px 20px rgba(255, 152, 0, 0.12);
-        border-color: var(--mud-palette-primary);
-    }
-    .cell-locked {
-        background-color: #DBD5CF !important;
-        border-style: dashed;
-        @* filter: grayscale(0.6); *@
-        opacity: 0.8;
-    }
-    .lock-overlay {
-        font-size: 10px;
-        color: #d32f2f;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 4px;
-    }
-    
-    .weekday {
-        background-color: #FFFFFF;
-    }
-
-    .cell-header {
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .day-num {
-        font-weight: bold; color: var(--mud-palette-text-primary);
-    }
-    .today-tag { 
-        font-size: 0.65rem; 
-        background-color: #FFE0B2; /* 淺橘色 */
-        color: #E65100; /* 深橘色文字 */
-        padding: 1px 8px; 
-        border-radius: 4px; 
-        font-weight: 800;
-    }
-
-    .meal-section {
-        margin-top: 4px;
-    }
-    .section-label { 
-        font-size: 0.65rem; 
-        color: #8D6E63; /* 改用褐色標籤，視覺更穩重 */
-        font-weight: bold;
-    }
-    
-    .select-group {
-        display: flex; gap: 4px;
-    }
-    .flex-grow-2 {
-        flex: 2;
-    }
-    .flex-grow-1 {
-        flex: 1;
-    }
-
-    .rest-mode { 
-        color: #BDBDBD; 
-    }
-
-    /* 隱藏 MudSelect 預設底線顏色，讓介面更乾淨 */
-    ::deep .mud-input > input.mud-input-root {
-        font-size: 0.75rem !important;
-    }
-
-    .rice-cycle-btn {
-        min-width: 32px !important;
-        height: 32px !important;
-        padding: 0 !important;
-        border-radius: 8px !important;
-        border: 1px solid #E0D7C6 !important;
-        color: #5D4037 !important;
-        font-weight: 800 !important;
-    }
-    
-    .rice-cycle-btn:hover {
-        background-color: #FFF3E0 !important;
-        border-color: #FF9800 !important;
-    }
-
-    .readonly-icon {
-        pointer-events: none; 
-        cursor: default;
-        /* 如果想稍微暗示不能點，可以加這行，不加就是完全原色 */
-        /* opacity: 0.9; */ 
-    }
-
-    /* 針對手機模式的強力修正 */
-    @@media (max-width: 960px) {
-        /* 1. 確保 cell-body 是填滿的 */
-        .cell-body {
-            flex: 1 1 auto !important;
-            width: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-            min-width: 0 !important; /* 核心：防止 flex 子元素收縮 */
-        }
-
-        /* 2. 針對 MudSelect 的所有封裝層級強制撐開 */
-        /* 使用 ::deep 穿透元件封裝 */
-        ::deep .mud-input-control {
-            width: 100% !important;
-            flex: 1 1 auto !important;
-            display: flex !important; /* 強制從 inline-flex 變為 flex */
-        }
-
-        ::deep .mud-input-control-input-container {
-            width: 100% !important;
-            display: flex !important;
-        }
-
-        /* 3. 解決上鎖 (Disabled) 導致的底線縮短問題 */
-        ::deep .mud-input.mud-disabled {
-            width: 100% !important;
-            display: flex !important;
-        }
-
-        /* 4. 針對你 app.css 提到的底線樣式進行寬度強化 */
-        ::deep .mud-input.mud-input-underline:before,
-        ::deep .mud-input.mud-input-underline:after {
-            width: 100% !important;
-            left: 0 !important;
-        }
-
-        /* 5. 確保 meal-section 內的所有層級都不會收縮 */
-        .meal-section, .select-group {
-            width: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-    }
-</style>
 
 @code {
     [Parameter]
     [EditorRequired]
     public DateTime Date { get; set; }
 
+    // 訂單要寫給哪位使用者（一般使用者只能是自己，見 OnMealChanged）
     [Parameter]
-    public Order? Order { get; set; } = new();
+    public int TargetUserId { get; set; }
 
+    // 該日期已有的訂單，沒有則為 null
+    [Parameter]
+    public Order? Order { get; set; }
+
+    // 編輯模式（管理員修改他人訂單）：不受鎖定限制
     [Parameter]
     public bool IsEditMode { get; set; } = false;
 
+    // 是否顯示餐點選單（日期鎖定頁只需要鎖定開關）
+    [Parameter]
+    public bool ShowMeals { get; set; } = true;
+
+    // 該日期在 LockedDates 的紀錄，沒有則為 null
     [Parameter]
     public LockedDate? LockedDate { get; set; }
 
-
-    private Order _internalOrder = new();
     private CancellationTokenSource? _cts;
-    private bool IsToday => Date.Date == DateTime.Today;
+    private bool IsToday => Date.Date == AppTime.Today;
     // 最終上鎖
     private bool _isFinalLocked = false;
+    // 畫面上目前選的餐點
+    private string _bentoName = string.Empty;
+    private string _addBentoName = string.Empty;
     // 最後一次成功儲存的餐點，儲存失敗時還原
     private string _savedBentoName = string.Empty;
     private string _savedAddBentoName = string.Empty;
-
-    // 初始化
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-
-        if (Order == null)
-        {
-            Order = new Order
-            {
-                OrderDate = DateTime.Now.Date,
-                BentoItem = new BentoItem
-                {
-                    Name = string.Empty
-                },
-                AdditionalBentoItem = new BentoItem
-                {
-                    Name = string.Empty
-                }
-            };
-        }
-        else
-        {
-            Order.BentoItem ??= new BentoItem
-            {
-                Name = string.Empty
-            };
-            Order.AdditionalBentoItem ??= new BentoItem
-            {
-                Name = string.Empty
-            };
-        }
-    }
+    // 該日期的鎖定紀錄（管理員切換後就地更新）
+    private LockedDate? _lockRecord;
 
     protected override void OnParametersSet()
     {
-        base.OnParametersSet();
-
-        if (Order != null)
-        {
-            _internalOrder = new()
-            {
-                Id = Order.Id,
-                UserId = Order.UserId,
-                OrderDate = Date,
-                BentoItem = Order.BentoItem ?? new() {
-                    Name = string.Empty
-                },
-                AdditionalBentoItem = Order.AdditionalBentoItem ??
-                    new () {
-                    Name = string.Empty
-                }
-            };
-        }
-        else
-        {
-            _internalOrder = new()
-            {
-                OrderDate = Date,
-                BentoItem = new () {
-                    Name = string.Empty
-                },
-                AdditionalBentoItem = new() {
-                    Name = string.Empty
-                }
-            };
-        }
-
-        _savedBentoName = _internalOrder.BentoItem?.Name ?? string.Empty;
-        _savedAddBentoName =
-            _internalOrder.AdditionalBentoItem?.Name ?? string.Empty;
+        _bentoName = _savedBentoName = Order?.BentoItem?.Name ?? string.Empty;
+        _addBentoName = _savedAddBentoName =
+            Order?.AdditionalBentoItem?.Name ?? string.Empty;
 
         _lockRecord = LockedDate;
-        // 編輯模式（管理員修改他人訂單）不受鎖定限制
         _isFinalLocked = !IsEditMode && IsLockedNow();
     }
 
-    // 該日期在 LockedDates 的紀錄（管理員切換後就地更新）
-    private LockedDate? _lockRecord;
-
     // 鎖定規則統一由 OrderLockPolicy 判斷（與伺服器端相同）
     private bool IsLockedNow() =>
-        OrderLockPolicy.IsLocked(Date, DateTime.Now, _lockRecord);
+        OrderLockPolicy.IsLocked(Date, AppTime.Now, _lockRecord);
 
-    private async Task OnMealChanged(string value, string type)
+    private async Task OnMealChanged(string? value, bool isAdditional)
     {
-        if (type == "normal")
+        if (isAdditional)
         {
-            _internalOrder.BentoItem!.Name = value ?? string.Empty;
+            _addBentoName = value ?? string.Empty;
         }
         else
         {
-            _internalOrder.AdditionalBentoItem!.Name = value ?? string.Empty;
+            _bentoName = value ?? string.Empty;
         }
 
         // 頁面開著時可能已超過截止時間，選餐當下再檢查一次
@@ -338,26 +136,32 @@
             return;
         }
 
-        _internalOrder.UserId = GlobalState.IsAdmin ?
-            GlobalState.FakeId : GlobalState.CurrentUser!.Id;
-        _internalOrder.OrderDate = Date;
-
         await TriggerAutoSave();
     }
 
     private async Task TriggerAutoSave()
     {
         _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new();
+
+        var order = new Order
+        {
+            // 一般使用者只能修改自己的訂單
+            UserId = GlobalState.IsAdmin ?
+                TargetUserId : GlobalState.CurrentUser!.Id,
+            OrderDate = Date.Date,
+            BentoItem = new() { Name = _bentoName },
+            AdditionalBentoItem = new() { Name = _addBentoName }
+        };
 
         try
         {
             await Task.Delay(500, _cts.Token);
-            await BentoDbService.UpsertOrderAsync(
-                _internalOrder, GlobalState.IsAdmin);
+            await BentoDbService.UpsertOrderAsync(order, GlobalState.IsAdmin);
 
-            _savedBentoName = _internalOrder.BentoItem!.Name;
-            _savedAddBentoName = _internalOrder.AdditionalBentoItem!.Name;
+            _savedBentoName = order.BentoItem.Name;
+            _savedAddBentoName = order.AdditionalBentoItem.Name;
             Snackbar.Add("資料已同步", Severity.Info);
         }
         catch (TaskCanceledException)
@@ -384,8 +188,8 @@
     // 還原成最後一次成功儲存的餐點
     private void RevertToSaved()
     {
-        _internalOrder.BentoItem!.Name = _savedBentoName;
-        _internalOrder.AdditionalBentoItem!.Name = _savedAddBentoName;
+        _bentoName = _savedBentoName;
+        _addBentoName = _savedAddBentoName;
     }
 
     private async Task OnManualToggleChanged(bool value)
@@ -397,7 +201,7 @@
 
         LockedDate lockedDate = new()
         {
-            Date = Date,
+            Date = Date.Date,
             IsLocked = value
         };
 
@@ -413,6 +217,5 @@
 
         // 過去日期與當天截止後，即使解鎖也維持鎖定
         _isFinalLocked = IsLockedNow();
-        StateHasChanged();
     }
 }

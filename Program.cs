@@ -7,24 +7,32 @@ using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 讀取資料庫連線字串
-var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection");
+// 資料庫與菜單圖片的存放位置（見 Services/AppPaths.cs）
+var appPaths = new AppPaths(builder.Configuration, builder.Environment);
+builder.Services.AddSingleton(appPaths);
 
 // Sqlite資料庫
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlite(connectionString));
-// Add services to the container.
+    options.UseSqlite(appPaths.ConnectionString));
+
+// Blazor：全站 Interactive Server。
+// 菜單圖片在瀏覽器壓縮後透過 circuit 傳回，需放大單次訊息上限
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    .AddHubOptions(options =>
+    {
+        options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
+    });
 builder.Services.AddCascadingAuthenticationState();
 // MudBlazor Service
 builder.Services.AddMudServices();
-// 全域狀態
+// 全域狀態（每個 circuit 一份）
 builder.Services.AddScoped<GlobalState>();
 // 資料庫操作
 builder.Services.AddScoped<BentoDbService>();
@@ -36,16 +44,11 @@ builder.Services.AddScoped<MenuUploadService>();
 // 餐點資料
 builder.Services.AddSingleton<IMealProvider, MealProvider>();
 
+// 排程：每日 09:05 統計、每月 28 日提醒
 builder.Services.AddHostedService<OrderReportService>();
-
 builder.Services.AddHostedService<NotifyOrderService>();
 
-builder.Services.AddServerSideBlazor().AddHubOptions(options =>
-{
-    options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
-});
-
-// 註冊驗證服務 (這是你目前漏掉的部分)
+// Cookie 驗證
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -75,11 +78,20 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// builder.Services.ConfigureExternalCookie(options =>
-// {
-//     options.Cookie.HttpOnly = true;
-//     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-// });
+// 登入限流：同一個 IP 每 5 分鐘最多嘗試 10 次
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(5),
+                QueueLimit = 0
+            }));
+});
 
 var app = builder.Build();
 
@@ -88,13 +100,6 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    // SQLite 不會自動建立資料夾，先確保資料庫檔所在的資料夾存在
-    var dataSource = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(
-        dbContext.Database.GetConnectionString()).DataSource;
-    var dbDir = Path.GetDirectoryName(Path.GetFullPath(dataSource));
-    if (!string.IsNullOrEmpty(dbDir)) Directory.CreateDirectory(dbDir);
-
     dbContext.Database.Migrate();
 }
 
@@ -105,8 +110,12 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", 
-    createScopeForStatusCodePages: true);
+
+// 頁面找不到時顯示 /not-found；/auth/* 是給 JS 呼叫的 API，保留原本的狀態碼
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/auth"),
+    branch => branch.UseStatusCodePagesWithReExecute("/not-found",
+        createScopeForStatusCodePages: true));
 
 // --- 2. 請求處理與安全性 ---
 // 處理轉發標頭
@@ -129,6 +138,7 @@ app.UseCookiePolicy(new CookiePolicyOptions
 
 // --- 3. 認證、授權與防偽 ---
 app.UseRouting();
+app.UseRateLimiter();
 
 // 認證與授權
 app.UseAuthentication(); // 認證：你是誰
@@ -136,6 +146,8 @@ app.UseAuthorization(); // 授權：你能做什麼
 
 app.UseAntiforgery();
 
+// 登入（由 App.razor 的 bentoAuth.login 呼叫）。
+// 成功後前端會重新載入頁面，由伺服器依 cookie 決定身分與導向
 app.MapPost("/auth/login", async (
     LoginRequest request,
     BentoDbService bentoDbService,
@@ -174,15 +186,8 @@ app.MapPost("/auth/login", async (
         }
     );
 
-    return Results.Ok(new UserSession
-    {
-        Id = user.Id,
-        Username = user.Username,
-        Realname = user.RealName,
-        Role = user.Role,
-        Expiry = DateTime.Now.AddDays(7)
-    });
-}).AllowAnonymous();
+    return Results.Ok();
+}).AllowAnonymous().RequireRateLimiting("login");
 
 app.MapPost("/auth/logout", async (HttpContext httpContext) =>
 {
@@ -193,28 +198,18 @@ app.MapPost("/auth/logout", async (HttpContext httpContext) =>
     return Results.Ok();
 });
 
-app.MapGet("/auth/session", (HttpContext httpContext) =>
+// 菜單圖片（位置見 AppPaths，不快取以免看到舊菜單）。
+// 不用 /menu.jpg，避免被 UseStaticFiles 搶先回傳 wwwroot 裡的舊檔
+app.MapGet("/menu-image", (AppPaths paths,
+    HttpContext httpContext) =>
 {
-    var principal = httpContext.User;
-    if (principal.Identity?.IsAuthenticated != true)
+    if (!paths.MenuExists)
     {
-        return Results.Unauthorized();
+        return Results.NotFound();
     }
 
-    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (!int.TryParse(userId, out var id))
-    {
-        return Results.Unauthorized();
-    }
-
-    return Results.Ok(new UserSession
-    {
-        Id = id,
-        Username = principal.Identity.Name ?? string.Empty,
-        Realname = principal.FindFirstValue("RealName") ?? string.Empty,
-        Role = principal.FindFirstValue(ClaimTypes.Role) ?? string.Empty,
-        Expiry = DateTime.Now.AddDays(7)
-    });
+    httpContext.Response.Headers.CacheControl = "no-cache";
+    return Results.File(paths.MenuFilePath, "image/jpeg");
 });
 
 // --- 4. 端點對應 ---

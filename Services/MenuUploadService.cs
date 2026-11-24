@@ -1,35 +1,27 @@
-using Microsoft.AspNetCore.Components.Forms;
-
 namespace bento_order.Services;
 
+// 儲存菜單圖片（已在瀏覽器端壓縮成 JPEG）
 public class MenuUploadService
 {
-    public MenuUploadService() {}
+    private readonly AppPaths _appPaths;
 
-    public async Task<bool> UploadMenuAsync(Stream fileStream,
-        string fileName)
+    public MenuUploadService(AppPaths appPaths)
     {
-        try
-        {
-            // 取得副檔名
-            var extension = Path.GetExtension(fileName).ToLower();
-            // 新檔名
-            var newFileName = $"menu{extension}";
-            // 儲存資料夾路徑
-            var folderPath = Path.Combine(
-                Directory.GetCurrentDirectory(), "wwwroot");
-            
-            // 儲存路徑
-            var filePath = Path.Combine(folderPath, newFileName);
+        _appPaths = appPaths;
+    }
 
-            using var fs = new FileStream(filePath, FileMode.Create);
+    public async Task UploadMenuAsync(Stream fileStream)
+    {
+        var directory = Path.GetDirectoryName(_appPaths.MenuFilePath)!;
+        Directory.CreateDirectory(directory);
+
+        // 先寫到暫存檔再取代，避免寫到一半時有人讀到不完整的圖
+        var tempPath = _appPaths.MenuFilePath + ".tmp";
+        await using (var fs = new FileStream(tempPath, FileMode.Create))
+        {
             await fileStream.CopyToAsync(fs);
+        }
 
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        File.Move(tempPath, _appPaths.MenuFilePath, overwrite: true);
     }
 }

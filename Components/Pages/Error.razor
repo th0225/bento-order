@@ -1,0 +1,14 @@
+@page "/Error"
+@attribute [AllowAnonymous]
+
+@* 正式環境的未處理例外由 UseExceptionHandler("/Error") 導到這裡 *@
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16 text-center">
+    <MudText Typo="Typo.h5">發生錯誤</MudText>
+    <MudText Typo="Typo.body1" Class="mt-4">
+        系統處理您的要求時發生問題，請稍後再試。
+    </MudText>
+    <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary"
+        Class="mt-6">
+        回到首頁
+    </MudButton>
+</MudContainer>

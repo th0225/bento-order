@@ -1,0 +1,119 @@
+/* CalendarCell 專屬樣式（CSS isolation）。
+   MudBlazor 元件內部的元素要用 ::deep 才選得到 */
+
+.cell-wrapper {
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    border-radius: 16px;
+    transition: transform 0.2s;
+    background-color: var(--mud-palette-surface);
+    /* 奶油風軟陰影：帶有微弱橘色調 */
+    box-shadow: 0 8px 30px rgba(255, 167, 38, 0.08);
+    border: 1px solid var(--mud-palette-lines-default);
+}
+
+/* 滑鼠移入格子的效果 */
+.cell-wrapper:hover {
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 8px 20px rgba(255, 152, 0, 0.12);
+}
+
+.cell-locked {
+    background-color: #DBD5CF;
+    border-style: dashed;
+    opacity: 0.8;
+}
+
+.lock-overlay {
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.day-num {
+    font-weight: bold;
+    color: var(--mud-palette-text-primary);
+}
+
+.today-tag {
+    font-size: 0.65rem;
+    background-color: #FFE0B2; /* 淺橘色 */
+    color: #E65100; /* 深橘色文字 */
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-weight: 800;
+}
+
+.meal-section {
+    margin-top: 4px;
+}
+
+.section-label {
+    font-size: 0.65rem;
+    color: var(--mud-palette-secondary);
+    font-weight: bold;
+}
+
+.select-group {
+    display: flex;
+    gap: 4px;
+}
+
+.select-group ::deep .flex-grow-2 {
+    flex: 2;
+}
+
+.rest-mode {
+    color: #BDBDBD;
+}
+
+/* 一般使用者看得到鎖頭，但不能點 */
+.lock-overlay ::deep .readonly-icon {
+    pointer-events: none;
+    cursor: default;
+}
+
+.cell-wrapper ::deep .mud-input > input.mud-input-root {
+    font-size: 0.75rem;
+}
+
+/* 手機版：選單撐滿整個格子寬度 */
+@media (max-width: 960px) {
+    .cell-body {
+        flex: 1 1 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .meal-section,
+    .select-group {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .select-group ::deep .mud-input-control,
+    .select-group ::deep .mud-input-control-input-container,
+    .select-group ::deep .mud-input.mud-disabled {
+        width: 100%;
+        display: flex;
+    }
+
+    .select-group ::deep .mud-input.mud-input-underline:before,
+    .select-group ::deep .mud-input.mud-input-underline:after {
+        width: 100%;
+        left: 0;
+    }
+}

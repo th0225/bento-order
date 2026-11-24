@@ -1,5 +1,5 @@
 @page "/admin/menu-manager"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = Roles.Admin)]
 @using bento_order.Services
 
 @inject MenuUploadService MenuUploadService
@@ -107,13 +107,12 @@
                     )}";
                 await InvokeAsync(StateHasChanged);
 
-                Snackbar.Add("上傳成功", Severity.Info);
+                Snackbar.Add("已產生預覽，確認後請按「確認上傳」", Severity.Info);
             }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"預覽失敗: {ex.Message}", Severity.Error);
-            Console.WriteLine(ex.Message);
         }
     }
 
@@ -136,7 +135,7 @@
         try
         {
             using var ms = new MemoryStream(_compressedData!);
-            await MenuUploadService.UploadMenuAsync(ms, "menu.jpg");
+            await MenuUploadService.UploadMenuAsync(ms);
 
             Snackbar.Add("菜單上傳成功", Severity.Success);
             ClearPreview();

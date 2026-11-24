@@ -1,10 +1,16 @@
+namespace bento_order.Services;
+
+// 每月 28 日 08:50（台灣時間）推播「完成下個月訂餐」提醒
 public class NotifyOrderService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<NotifyOrderService> _logger;
 
-    public NotifyOrderService(IServiceProvider serviceProvider)
+    public NotifyOrderService(IServiceProvider serviceProvider,
+        ILogger<NotifyOrderService> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(
@@ -12,33 +18,28 @@ public class NotifyOrderService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.Now;
+            var now = AppTime.Now;
             var targetTime = new DateTime(
                 now.Year, now.Month, 28, 8, 50, 0
             );
 
-            if (now > targetTime)
+            if (now >= targetTime)
             {
                 targetTime = targetTime.AddMonths(1);
             }
 
-            var delay = targetTime - now;
-            await Task.Delay(delay, stoppingToken);
+            await Task.Delay(targetTime - now, stoppingToken);
 
-            using (var scope = _serviceProvider.CreateScope())
+            using var scope = _serviceProvider.CreateScope();
+            try
             {
-                try
-                {
-                    var bentoService = scope.ServiceProvider.GetRequiredService
-                        <BentoReportService>();
-                    await bentoService.SendNotifyOrderMessageAsync();
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine(
-                        $"[Bento] LINE 訂餐通知發送失敗：{ex.Message}"
-                    );
-                }
+                var bentoService = scope.ServiceProvider
+                    .GetRequiredService<BentoReportService>();
+                await bentoService.SendNotifyOrderMessageAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LINE 訂餐提醒發送失敗");
             }
         }
     }

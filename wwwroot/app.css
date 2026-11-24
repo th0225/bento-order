@@ -8,11 +8,6 @@ body {
     font-family: "Noto Sans TC", "微軟正黑體", sans-serif;
 }
 
-/* 奶油風軟陰影：帶有微弱橘色調 */
-.shadow-soft {
-    box-shadow: 0 8px 30px rgba(255, 167, 38, 0.08) !important;
-}
-
 /* 統一全域輸入框底線顏色 */
 .mud-input.mud-input-underline:before {
     border-bottom: 1px solid #E0D7C6 !important;
@@ -44,13 +39,31 @@ body {
 
 /* 透明頂部導航欄 (搭配 Class="main-appbar") */
 .main-appbar {
-    background-color: rgba(247, 243, 238, 0.01) !important;
-    backdrop-filter: blur(8px);
+    /* 奶油色半透明質感 */
+    background-color: rgba(247, 243, 238, 0.9) !important;
     border-bottom: 1.5px solid #D7CCC8 !important;
     box-shadow: none !important;
-    color: #4E342E !important;
+    color: var(--mud-palette-appbar-text) !important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+}
+
+/* AppBar 上的文字與按鈕 */
+.appbar-text {
+    color: var(--mud-palette-appbar-text) !important;
+    font-weight: 800 !important;
+}
+
+/* 手機版 AppBar 微調 */
+@media (max-width: 600px) {
+    .mud-typography-h6 {
+        font-size: 1rem !important;
+    }
+
+    /* 縮小手機版按鈕點擊區域，避免太擠 */
+    .mud-button-root {
+        padding: 4px 8px;
+    }
 }
 
 .main-appbar .mud-toolbar {
@@ -146,13 +159,6 @@ body {
 /* ============================================================
    4. 月曆元件 (Calendar & Cell)
    ============================================================ */
-
-/* 月曆網格 */
-.calendar-grid-container {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 12px;
-}
 
 /* 月曆格子 Hover 狀態：邊框變色並微幅放大 */
 .cell-wrapper {

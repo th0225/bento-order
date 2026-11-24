@@ -1,12 +1,9 @@
 @page "/admin/system-config"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = Roles.Admin)]
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
 @inject BentoReportService BentoReportService
-@inject GlobalState GlobalState
-@inject NavigationManager Navigation
-@inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
@@ -14,13 +11,13 @@
         <MudTextField @bind-Value="@_lineAccessToken"
             Label="LINE Access Token" Variant="Variant.Outlined"
             Margin="Margin.Dense"
-            InputType="@(_isShowLineAccessToken ? 
+            InputType="@(_isShowLineAccessToken ?
                 InputType.Text : InputType.Password)"
             Adornment="Adornment.End"
             AdornmentIcon="@(_isShowLineAccessToken ?
-                Icons.Material.Filled.Visibility : 
+                Icons.Material.Filled.Visibility :
                 Icons.Material.Filled.VisibilityOff)"
-            OnAdornmentClick="() => _isShowLineAccessToken = 
+            OnAdornmentClick="() => _isShowLineAccessToken =
                 !_isShowLineAccessToken" />
 
         <MudTextField @bind-Value="@_lineId" Class="mt-4"
@@ -29,7 +26,7 @@
             InputType="@(_isShowLineId ? InputType.Text : InputType.Password)"
             Adornment="Adornment.End"
             AdornmentIcon="@(_isShowLineId ?
-                Icons.Material.Filled.Visibility : 
+                Icons.Material.Filled.Visibility :
                 Icons.Material.Filled.VisibilityOff)"
             OnAdornmentClick="() => _isShowLineId = !_isShowLineId" />
 
@@ -39,10 +36,16 @@
             InputType="@(_isShowLineOrderId ? InputType.Text : InputType.Password)"
             Adornment="Adornment.End"
             AdornmentIcon="@(_isShowLineOrderId ?
-                Icons.Material.Filled.Visibility : 
+                Icons.Material.Filled.Visibility :
                 Icons.Material.Filled.VisibilityOff)"
             OnAdornmentClick="() => _isShowLineOrderId = !_isShowLineOrderId" />
-        
+
+        <MudTextField @bind-Value="@_lineReportTitle" Class="mt-4"
+            Label="每日統計訊息標題" Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+            Placeholder="@BentoReportService.DefaultReportTitle"
+            HelperText="@($"留空時使用「{BentoReportService.DefaultReportTitle}」")" />
+
         <MudGrid Class="mt-4">
             <MudItem xs="12" sm="3">
                 <MudButton Color="Color.Primary" Variant="Variant.Filled"
@@ -78,38 +81,41 @@
     private string? _lineAccessToken = string.Empty;
     private string? _lineId = string.Empty;
     private string? _lineOrderId = string.Empty;
+    private string? _lineReportTitle = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
-        await LoadConfigAsync();
+        try
+        {
+            await LoadConfigAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ 讀取設定失敗：{ex.Message}", Severity.Error);
+        }
     }
 
     private async Task SaveConfigAsync()
     {
         try
         {
-            SystemConfig lineId = new()
+            var values = new Dictionary<string, string?>
             {
-                Key = "LineId",
-                Value = _lineId ?? string.Empty
-            };
-            await BentoDbService.SaveConfigAsync(lineId);
-
-            SystemConfig lineOrderId = new()
-            {
-                Key = "LineOrderId",
-                Value = _lineOrderId ?? string.Empty
-            };
-            await BentoDbService.SaveConfigAsync(lineOrderId);
-
-            SystemConfig lineAccessToken = new()
-            {
-                Key = "LineAccessToken",
-                Value = _lineAccessToken ?? string.Empty
+                [ConfigKeys.LineId] = _lineId,
+                [ConfigKeys.LineOrderId] = _lineOrderId,
+                [ConfigKeys.LineAccessToken] = _lineAccessToken,
+                [ConfigKeys.LineReportTitle] = _lineReportTitle
             };
 
-            await BentoDbService.SaveConfigAsync(lineAccessToken);
+            foreach (var (key, value) in values)
+            {
+                await BentoDbService.SaveConfigAsync(new SystemConfig
+                {
+                    Key = key,
+                    Value = value?.Trim() ?? string.Empty
+                });
+            }
+
             await LoadConfigAsync();
             Snackbar.Add("✅ 系統設定已成功儲存至資料庫", Severity.Success);
         }
@@ -121,22 +127,14 @@
 
     private async Task LoadConfigAsync()
     {
-        List<SystemConfig> configs = await BentoDbService.GetConfigAsync();
+        var configs = await BentoDbService.GetConfigAsync();
+        string Get(string key) =>
+            configs.FirstOrDefault(c => c.Key == key)?.Value ?? string.Empty;
 
-        if (configs != null && configs.Any())
-        {
-            _lineAccessToken = configs.FirstOrDefault(
-                c => c.Key == "LineAccessToken"
-            )?.Value ?? string.Empty;
-
-            _lineId = configs.FirstOrDefault(
-                c => c.Key == "LineId"
-            )?.Value ?? string.Empty;
-
-            _lineOrderId = configs.FirstOrDefault(
-                c => c.Key == "LineOrderId"
-            )?.Value ?? string.Empty;
-        }
+        _lineAccessToken = Get(ConfigKeys.LineAccessToken);
+        _lineId = Get(ConfigKeys.LineId);
+        _lineOrderId = Get(ConfigKeys.LineOrderId);
+        _lineReportTitle = Get(ConfigKeys.LineReportTitle);
     }
 
     private async Task SendTestLineMessage()
@@ -160,7 +158,7 @@
         {
             await BentoReportService.SendNotifyOrderMessageAsync();
             Snackbar.Add(
-                "✅ LINE 統計訊息已成功發送！", Severity.Success);
+                "✅ LINE 訂餐提醒已成功發送！", Severity.Success);
         }
         catch (Exception ex)
         {

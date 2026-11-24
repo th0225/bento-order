@@ -1,0 +1,82 @@
+@using System.Globalization
+@using bento_order.Services
+
+@* 月曆版面（標題、切換月份、星期列、日期格），格子內容由 CellTemplate 決定 *@
+
+<div class="month-calendar">
+<MudPaper Elevation="0" Class="pa-6 rounded-xl shadow-cream mb-6">
+    <div class="d-flex align-center">
+        <div class="month-display">
+            <MudText Typo="Typo.h4" Style="font-weight: 800">
+                @Month.ToString("yyyy")
+            </MudText>
+            <MudText Typo="Typo.h5" Style="margin-top: -8px;">
+                @Month.ToString("MMMM", ZhTw)
+            </MudText>
+        </div>
+
+        <MudSpacer />
+
+        <div class="nav-controls">
+            <MudIconButton Color="Color.Inherit"
+                Icon="@Icons.Material.Filled.ArrowBackIosNew"
+                OnClick="@(() => ChangeMonthAsync(Month.AddMonths(-1)))" />
+            <MudButton Variant="Variant.Text" Style="font-weight: bold;"
+                OnClick="@(() => ChangeMonthAsync(AppTime.Today))">
+                今天
+            </MudButton>
+            <MudIconButton Color="Color.Inherit"
+                Icon="@Icons.Material.Filled.ArrowForwardIos"
+                OnClick="@(() => ChangeMonthAsync(Month.AddMonths(1)))" />
+        </div>
+    </div>
+</MudPaper>
+
+<div class="calendar-grid mb-2">
+    @foreach (var day in WeekDays)
+    {
+        <div class="weekday-header">@day</div>
+    }
+</div>
+
+<div class="calendar-grid">
+    @for (int i = 0; i < EmptyDaysBefore; i++)
+    {
+        <div class="empty-cell"></div>
+    }
+
+    @for (int d = 1; d <= DaysInMonth; d++)
+    {
+        var date = new DateTime(Month.Year, Month.Month, d);
+        <div @key="date">@CellTemplate(date)</div>
+    }
+</div>
+</div>
+
+@code {
+    private static readonly CultureInfo ZhTw =
+        CultureInfo.CreateSpecificCulture("zh-TW");
+    private static readonly string[] WeekDays =
+        ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+    // 顯示的月份（只看年、月）
+    [Parameter]
+    [EditorRequired]
+    public DateTime Month { get; set; }
+
+    // 切換月份時通知父元件（傳入該月 1 日）
+    [Parameter]
+    public EventCallback<DateTime> MonthChanged { get; set; }
+
+    // 每一天的格子內容
+    [Parameter]
+    [EditorRequired]
+    public RenderFragment<DateTime> CellTemplate { get; set; } = default!;
+
+    private int DaysInMonth => DateTime.DaysInMonth(Month.Year, Month.Month);
+    private int EmptyDaysBefore =>
+        (int)new DateTime(Month.Year, Month.Month, 1).DayOfWeek;
+
+    private Task ChangeMonthAsync(DateTime month) =>
+        MonthChanged.InvokeAsync(new DateTime(month.Year, month.Month, 1));
+}

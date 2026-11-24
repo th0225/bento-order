@@ -2,9 +2,6 @@
 @page "/login"
 @attribute [AllowAnonymous]
 
-@using System.Text.Json
-@using bento_order.Models
-
 @inject GlobalState GlobalState
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -18,7 +15,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.Restaurant" 
                         Color="Color.Primary" Size="Size.Large" Class="mb-2" />
                 <MudText Typo="Typo.h5" Align="Align.Center"
-                    GutterBottom="true" Class="longin-title">
+                    GutterBottom="true" Class="login-title">
                     Bento Order System
                 </MudText>
             </div>
@@ -83,72 +80,41 @@
 
         try
         {
-            var authResultJson = await JS.InvokeAsync<string>(
+            var result = await JS.InvokeAsync<string>(
                 "bentoAuth.login",
                 _username,
                 _password
             );
 
-            var authResult = JsonSerializer.Deserialize<AuthLoginResult>(
-                authResultJson,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }
-            );
-
-            if (authResult?.Success == true && authResult.User != null)
+            switch (result)
             {
-                // 儲存登入者資訊
-                GlobalState.CurrentUser = authResult.User;
-
-                if (GlobalState.IsAdmin)
-                {
-                    Navigation.NavigateTo("/admin/users", forceLoad: true);
-                }
-                else
-                {
-                    // 跳轉至首頁
-                    Navigation.NavigateTo("/home", forceLoad: true);
-                }
-            }
-            else
-            {
-                _errorMessage = authResult?.ErrorMessage ?? "帳號密碼有誤";
+                case "ok":
+                    // 重新載入頁面建立新的連線，由伺服器依 cookie 決定身分與導向
+                    Navigation.NavigateTo("/", forceLoad: true);
+                    return;
+                case "throttled":
+                    _errorMessage = "嘗試次數過多，請 5 分鐘後再試";
+                    break;
+                default:
+                    _errorMessage = "帳號密碼有誤";
+                    break;
             }
         }
         catch
         {
             _errorMessage = "登入失敗，請稍後再試";
         }
-        finally
-        {
-            _isLoggingIn = false;
-        }
+
+        _isLoggingIn = false;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    // 已登入時直接導向對應頁面（GlobalState 由 MainLayout 從 cookie 建立）
+    protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && GlobalState.CurrentUser != null)
         {
-            // 確認是否初始化
-            await GlobalState.EnsureInitialized(JS);
-
-            if (GlobalState.CurrentUser == null)
-            {
-                Navigation.NavigateTo("/");
-            }
-            else
-            {
-                if (GlobalState.IsAdmin)
-                {
-                    Navigation.NavigateTo("/admin/users");
-                }
-                else
-                {
-                    Navigation.NavigateTo("/home");
-                }
-            }
+            Navigation.NavigateTo(
+                GlobalState.IsAdmin ? "/admin/users" : "/home");
         }
     }
 
@@ -167,12 +133,5 @@
             _passwordInputIcon = Icons.Material.Filled.Visibility;
             _passwordInput = InputType.Text;
         }
-    }
-
-    private sealed class AuthLoginResult
-    {
-        public bool Success { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-        public UserSession? User { get; set; }
     }
 }

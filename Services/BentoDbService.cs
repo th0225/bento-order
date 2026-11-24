@@ -179,13 +179,13 @@ public class BentoDbService
     {
         using var db = _dbFactory.CreateDbContext();
         var user = await db.Users.FindAsync(userId);
-        if (user != null && user.Role != "Admin")
+        if (user != null && user.Role != Roles.Admin)
         {
             // 一併刪除今天以後的訂單，避免離職者的訂單繼續計入統計；
             // 過去的訂單保留，以免已結算的歷史數量改變
             var futureOrders = await db.Orders
                 .Where(o => o.UserId == userId &&
-                    o.OrderDate >= DateTime.Today)
+                    o.OrderDate >= AppTime.Today)
                 .ToListAsync();
             db.Orders.RemoveRange(futureOrders);
 
@@ -196,45 +196,67 @@ public class BentoDbService
 
 
     // --- 餐點訂購相關 ---
+    // 新增或更新某人某天的訂單（每人每天一筆）
     public async Task UpsertOrderAsync(Order order, bool isAdmin)
     {
-        var now = DateTime.Now;
         var orderDate = order.OrderDate.Date;
         order.OrderDate = orderDate;
-        using var db = _dbFactory.CreateDbContext();
 
-        if (!await db.Users.AnyAsync(u => u.Id == order.UserId))
+        using (var db = _dbFactory.CreateDbContext())
         {
-            throw new InvalidOperationException("使用者不存在。");
-        }
-
-        if (!isAdmin)
-        {
-            var lockRecord = await db.LockedDates.FirstOrDefaultAsync(d =>
-                d.Date >= orderDate && d.Date < orderDate.AddDays(1)
-            );
-
-            if (OrderLockPolicy.IsLocked(orderDate, now, lockRecord))
+            if (!await db.Users.AnyAsync(u => u.Id == order.UserId))
             {
-                throw new UnauthorizedAccessException("此日期已截止或鎖定，無法修改訂單。");
+                throw new InvalidOperationException("使用者不存在。");
+            }
+
+            if (!isAdmin)
+            {
+                var lockRecord = await db.LockedDates
+                    .FirstOrDefaultAsync(d => d.Date == orderDate);
+
+                if (OrderLockPolicy.IsLocked(orderDate, AppTime.Now,
+                    lockRecord))
+                {
+                    throw new UnauthorizedAccessException(
+                        "此日期已截止或鎖定，無法修改訂單。");
+                }
             }
         }
 
-        // 同時比對日期和使用者確認資料是否存在
+        try
+        {
+            await SaveOrderAsync(order);
+        }
+        catch (DbUpdateException)
+        {
+            // 同一人同一天同時新增（例如開兩個分頁），唯一索引衝突；
+            // 此時資料已存在，改用更新再試一次
+            await SaveOrderAsync(order);
+        }
+    }
+
+    private async Task SaveOrderAsync(Order order)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
         var existingOrder = await db.Orders
-            .FirstOrDefaultAsync(o => o.OrderDate == orderDate
+            .FirstOrDefaultAsync(o => o.OrderDate == order.OrderDate
                 && o.UserId == order.UserId);
 
         if (existingOrder == null)
         {
-            // 新增資料
-            db.Orders.Add(order);
+            db.Orders.Add(new Order
+            {
+                UserId = order.UserId,
+                OrderDate = order.OrderDate,
+                BentoItem = CopyItem(order.BentoItem),
+                AdditionalBentoItem = CopyItem(order.AdditionalBentoItem)
+            });
         }
         else
         {
             existingOrder.BentoItem ??= new();
-            existingOrder.BentoItem.Name =
-                order.BentoItem?.Name ?? string.Empty;
+            existingOrder.BentoItem.Name = order.BentoItem?.Name ?? string.Empty;
             existingOrder.BentoItem.Option =
                 order.BentoItem?.Option ?? string.Empty;
 
@@ -243,64 +265,58 @@ public class BentoDbService
                 order.AdditionalBentoItem?.Name ?? string.Empty;
             existingOrder.AdditionalBentoItem.Option =
                 order.AdditionalBentoItem?.Option ?? string.Empty;
-
-            db.Orders.Update(existingOrder);
-
-            // 更新資料
-            // db.Entry(existingOrder).CurrentValues.SetValues(order);
-
-            // if (order.BentoItem != null)
-            // {
-            //     db.Entry(existingOrder.BentoItem!)
-            //         .CurrentValues.SetValues(order.BentoItem);
-            // }
-
-            // if (order.AdditionalBentoItem != null)
-            // {
-            //     db.Entry(existingOrder.AdditionalBentoItem!)
-            //         .CurrentValues.SetValues(order.AdditionalBentoItem);
-            // }
         }
 
-        // 儲存
         await db.SaveChangesAsync();
     }
 
-    public async Task<Order?> GetOrderByUserAsync(int UserId, DateTime date)
+    private static BentoItem CopyItem(BentoItem? item) => new()
+    {
+        Name = item?.Name ?? string.Empty,
+        Option = item?.Option ?? string.Empty
+    };
+
+    public async Task<Order?> GetOrderByUserAsync(int userId, DateTime date)
     {
         using var db = _dbFactory.CreateDbContext();
-        var order = await db.Orders
-            .FirstOrDefaultAsync(o => o.UserId == UserId &&
-                o.OrderDate.Year == date.Year &&
-                o.OrderDate.Month == date.Month &&
-                o.OrderDate.Day == date.Day);
-        return order;
+        return await db.Orders.FirstOrDefaultAsync(o =>
+            o.UserId == userId && o.OrderDate == date.Date);
     }
 
     public async Task<List<Order>> GetOrdersByMonthUserAsync(
         int year, int month, int userId)
     {
+        var start = new DateTime(year, month, 1);
+        var end = start.AddMonths(1);
+
         using var db = _dbFactory.CreateDbContext();
         return await db.Orders
-            .Where(o => o.OrderDate.Year == year &&
-                o.OrderDate.Month == month &&
-                o.UserId == userId).ToListAsync();
+            .Where(o => o.UserId == userId &&
+                o.OrderDate >= start && o.OrderDate < end)
+            .ToListAsync();
+    }
+
+    // 取得某一天的所有訂單（日期區間查詢，才能使用索引）
+    private static Task<List<Order>> GetOrdersOfDayAsync(AppDbContext db,
+        DateTime date)
+    {
+        var start = date.Date;
+        var end = start.AddDays(1);
+        return db.Orders
+            .Where(o => o.OrderDate >= start && o.OrderDate < end)
+            .ToListAsync();
     }
 
     // 取得每日各項餐點統計(A餐x1, B餐x2,...)
     public async Task<List<OrderCount>> GetDailyStatsAsync(DateTime date)
     {
         using var db = _dbFactory.CreateDbContext();
+        var orders = await GetOrdersOfDayAsync(db, date);
 
-        var orders = await db.Orders
-            .Where(o => o.OrderDate.Date == date.Date)
-            .ToListAsync();
-
-        var stats = orders
+        return orders
             .SelectMany(o => new[] { o.BentoItem, o.AdditionalBentoItem })
-            .Where(i => i != null && !string.IsNullOrEmpty(i.Name))
-            .Select(i => i!.Name)
-            .GroupBy(name => name)
+            .Where(i => !string.IsNullOrEmpty(i?.Name))
+            .GroupBy(i => i!.Name)
             .Select(g => new OrderCount
             {
                 MealName = g.Key,
@@ -308,29 +324,21 @@ public class BentoDbService
             })
             .OrderBy(x => x.MealName)
             .ToList();
-
-        return stats;
     }
 
+    // 期間內的餐點總數（含起訖日）
     public async Task<int> GetPeriodTotalCountAsync(
         DateTime start, DateTime end)
     {
+        var from = start.Date;
+        var to = end.Date.AddDays(1);
+
         using var db = _dbFactory.CreateDbContext();
-
         var orders = await db.Orders
-            .Where(o => o.OrderDate >= start.Date &&
-                o.OrderDate.Date <= end.Date)
+            .Where(o => o.OrderDate >= from && o.OrderDate < to)
             .ToListAsync();
-        
-        int total = orders.Sum(o =>
-            (o.BentoItem != null && !string.IsNullOrEmpty(o.BentoItem.Name) ?
-                1 : 0) +
-            (o.AdditionalBentoItem != null &&
-                !string.IsNullOrEmpty(o.AdditionalBentoItem.Name) ?
-                1 : 0)
-        );
 
-        return total;
+        return orders.Sum(o => o.MealCount);
     }
 
     public async Task<List<UserOrderDisplay>> GetDailyDetailAsync(
@@ -338,17 +346,16 @@ public class BentoDbService
     {
         using var db = _dbFactory.CreateDbContext();
 
-        // 取得所有使用者
+        // 取得所有一般使用者
         var users = await db.Users
-            .Where(u => u.Role != "Admin")
+            .Where(u => u.Role != Roles.Admin)
             .ToListAsync();
 
         // 取得當天的所有訂單
-        var orders = await db.Orders
-            .Where(o => o.OrderDate.Date == date.Date)
-            .ToListAsync();
+        var orders = await GetOrdersOfDayAsync(db, date);
 
-        var result = users.Select(u => {
+        return users.Select(u =>
+        {
             var order = orders.FirstOrDefault(o => o.UserId == u.Id);
             return new UserOrderDisplay
             {
@@ -360,13 +367,9 @@ public class BentoDbService
                     UserId = u.Id,
                     OrderDate = date
                 },
-                HasOrdered = (order != null) &&
-                    !(order?.BentoItem?.Name == string.Empty &&
-                        order?.AdditionalBentoItem?.Name == string.Empty)
+                HasOrdered = order?.HasMeal ?? false
             };
         }).ToList();
-
-        return result;
     }
 
 
@@ -375,16 +378,16 @@ public class BentoDbService
     {
         using var db = _dbFactory.CreateDbContext();
 
-        var _config = db.SystemConfig.FirstOrDefault(
+        var existing = await db.SystemConfig.FirstOrDefaultAsync(
             c => c.Key == config.Key);
-        
-        if (_config == null)
+
+        if (existing == null)
         {
             db.SystemConfig.Add(config);
         }
         else
         {
-            _config.Value = config.Value;
+            existing.Value = config.Value;
         }
 
         await db.SaveChangesAsync();
@@ -397,31 +400,48 @@ public class BentoDbService
         return await db.SystemConfig.ToListAsync();
     }
 
+    // 取得單一設定值，沒有設定時回傳空字串
+    public async Task<string> GetConfigValueAsync(string key)
+    {
+        using var db = _dbFactory.CreateDbContext();
+
+        var config = await db.SystemConfig.FirstOrDefaultAsync(
+            c => c.Key == key);
+        return config?.Value ?? string.Empty;
+    }
+
 
     // --- 日期鎖定設定相關 ---
     public async Task SaveLockedDateAsync(LockedDate lockedDate)
     {
+        lockedDate.Date = lockedDate.Date.Date;
         using var db = _dbFactory.CreateDbContext();
 
-        var _lockedDate = db.LockedDates.FirstOrDefault(
+        var existing = await db.LockedDates.FirstOrDefaultAsync(
             c => c.Date == lockedDate.Date);
-        
-        if (_lockedDate == null)
+
+        if (existing == null)
         {
             db.LockedDates.Add(lockedDate);
         }
         else
         {
-            _lockedDate.IsLocked = lockedDate.IsLocked;
+            existing.IsLocked = lockedDate.IsLocked;
         }
 
         await db.SaveChangesAsync();
     }
 
-    public async Task<List<LockedDate>> GetLockedDatesAsync()
+    // 取得某個月份的日期鎖定設定
+    public async Task<List<LockedDate>> GetLockedDatesAsync(int year,
+        int month)
     {
-        using var db = _dbFactory.CreateDbContext();
+        var start = new DateTime(year, month, 1);
+        var end = start.AddMonths(1);
 
-        return await db.LockedDates.ToListAsync();
+        using var db = _dbFactory.CreateDbContext();
+        return await db.LockedDates
+            .Where(d => d.Date >= start && d.Date < end)
+            .ToListAsync();
     }
 }

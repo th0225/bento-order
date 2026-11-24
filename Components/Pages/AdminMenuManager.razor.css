@@ -1,0 +1,26 @@
+/* AdminMenuManager 專屬樣式（CSS isolation） */
+
+.month-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-box {
+    position: relative;
+    width: 100%;
+}
+
+.menu-manager ::deep .preview-image {
+    max-width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+}
+
+.preview-box ::deep .preview-cancel {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background-color: white;
+}

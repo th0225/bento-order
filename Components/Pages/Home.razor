@@ -64,12 +64,14 @@
             Snackbar.Add($"讀取餐點種類失敗：{ex.Message}", Severity.Error);
         }
 
+        GlobalState.CalendarMonth = _month;
         await LoadMonthDataAsync();
     }
 
     private async Task OnMonthChanged(DateTime month)
     {
         _month = month;
+        GlobalState.CalendarMonth = month;
         await LoadMonthDataAsync();
     }
 

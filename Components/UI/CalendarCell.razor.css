@@ -54,6 +54,17 @@
     font-weight: 800;
 }
 
+.day-note {
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: var(--mud-palette-error);
+}
+
+/* 開放的日子（例如補班日） */
+.day-note-open {
+    color: var(--mud-palette-success);
+}
+
 .meal-section {
     margin-top: 4px;
 }

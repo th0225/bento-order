@@ -4,6 +4,7 @@
 
 @inject BentoDbService BentoDbService
 @inject BentoReportService BentoReportService
+@inject TelegramNotifier TelegramNotifier
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
@@ -72,6 +73,48 @@
         </MudGrid>
 
     </MudPaper>
+
+    @* Telegram：系統通知（目前用於備份失敗） *@
+    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+        <MudText Typo="Typo.subtitle1" Style="font-weight: 800;">
+            Telegram 系統通知
+        </MudText>
+        <MudText Typo="Typo.caption" Class="d-block mb-2">
+            資料備份失敗時發送通知。Bot Token 由 @@BotFather 建立 Bot 取得；
+            Chat ID 是要接收通知的個人或群組（可先傳訊息給 Bot，再用
+            getUpdates 查詢）。
+        </MudText>
+
+        <MudTextField @bind-Value="@_telegramBotToken"
+            Label="Telegram Bot Token" Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+            InputType="@(_isShowTelegramToken ? InputType.Text : InputType.Password)"
+            Adornment="Adornment.End"
+            AdornmentIcon="@(_isShowTelegramToken ?
+                Icons.Material.Filled.Visibility :
+                Icons.Material.Filled.VisibilityOff)"
+            OnAdornmentClick="() => _isShowTelegramToken = !_isShowTelegramToken" />
+
+        <MudTextField @bind-Value="@_telegramChatId" Class="mt-4"
+            Label="Telegram Chat ID" Variant="Variant.Outlined"
+            Margin="Margin.Dense" />
+
+        <MudGrid Class="mt-4">
+            <MudItem xs="12" sm="3">
+                <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                    OnClick="SaveConfigAsync">
+                    儲存設定
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Info" FullWidth
+                    StartIcon="@Icons.Material.Filled.Send"
+                    OnClick="SendTestTelegramAsync">
+                    發送 Telegram 測試訊息
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 </MudContainer>
 
 @code {
@@ -82,6 +125,9 @@
     private string? _lineId = string.Empty;
     private string? _lineOrderId = string.Empty;
     private string? _lineReportTitle = string.Empty;
+    private bool _isShowTelegramToken = false;
+    private string? _telegramBotToken = string.Empty;
+    private string? _telegramChatId = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,7 +150,9 @@
                 [ConfigKeys.LineId] = _lineId,
                 [ConfigKeys.LineOrderId] = _lineOrderId,
                 [ConfigKeys.LineAccessToken] = _lineAccessToken,
-                [ConfigKeys.LineReportTitle] = _lineReportTitle
+                [ConfigKeys.LineReportTitle] = _lineReportTitle,
+                [ConfigKeys.TelegramBotToken] = _telegramBotToken,
+                [ConfigKeys.TelegramChatId] = _telegramChatId
             };
 
             foreach (var (key, value) in values)
@@ -135,6 +183,22 @@
         _lineId = Get(ConfigKeys.LineId);
         _lineOrderId = Get(ConfigKeys.LineOrderId);
         _lineReportTitle = Get(ConfigKeys.LineReportTitle);
+        _telegramBotToken = Get(ConfigKeys.TelegramBotToken);
+        _telegramChatId = Get(ConfigKeys.TelegramChatId);
+    }
+
+    // 以已儲存的設定發送測試訊息（請先按「儲存設定」）
+    private async Task SendTestTelegramAsync()
+    {
+        try
+        {
+            await TelegramNotifier.SendAsync("✅ 便當訂餐系統：Telegram 通知測試成功");
+            Snackbar.Add("✅ Telegram 測試訊息已發送！", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ 發送失敗：{ex.Message}", Severity.Error);
+        }
     }
 
     private async Task SendTestLineMessage()

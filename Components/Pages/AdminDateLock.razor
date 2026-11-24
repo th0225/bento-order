@@ -3,10 +3,82 @@
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
+@inject HolidayImportService HolidayImportService
 @inject ISnackbar Snackbar
 
 @* 管理員設定每天是否開放訂餐（只有鎖定開關，沒有餐點選單） *@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 pb-8">
+    @* 匯入政府辦公日曆：平日國定假日鎖定、週末補班日開放 *@
+    <MudPaper Class="pa-4 mb-4" Style="background-color: #f8f9fa;">
+        <MudText Typo="Typo.subtitle1" Style="font-weight: 800;">
+            匯入國定假日與補班日
+        </MudText>
+        <MudText Typo="Typo.caption" Class="d-block mb-2">
+            來源：行政院人事行政總處「中華民國政府行政機關辦公日曆表」。
+            只會設定資料中的假日與補班日，其他日期不受影響。
+        </MudText>
+
+        <div class="d-flex flex-wrap align-center gap-2">
+            <MudSelect T="int" @bind-Value="_importYear" Label="年度"
+                Variant="Variant.Outlined" Margin="Margin.Dense"
+                Style="max-width: 140px;">
+                @foreach (var year in ImportYears)
+                {
+                    <MudSelectItem Value="year">@year 年</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.CloudDownload"
+                Disabled="@_isImporting" OnClick="ImportFromGovernmentAsync">
+                從政府資料匯入
+            </MudButton>
+
+            <MudFileUpload T="IBrowserFile" FilesChanged="ImportFromCsvAsync"
+                Accept=".csv" Disabled="@_isImporting">
+                <CustomContent>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                        HtmlTag="label" Disabled="@_isImporting"
+                        StartIcon="@Icons.Material.Filled.UploadFile"
+                        OnClick="@context.OpenFilePickerAsync">
+                        上傳 CSV
+                    </MudButton>
+                </CustomContent>
+                <SelectedTemplate />
+            </MudFileUpload>
+
+            @if (_isImporting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+        </div>
+
+        @if (_lastImport != null)
+        {
+            <MudAlert Severity="Severity.Success" Class="mt-3" Dense
+                ShowCloseIcon="true" CloseIconClicked="@(() => _lastImport = null)">
+                已匯入 @_lastImport.Year 年：鎖定 @_lastImport.LockedHolidays.Count 天平日假日，
+                開放 @_lastImport.OpenedWorkdays.Count 天週末補班日。
+                <div class="mt-1">
+                    @foreach (var day in _lastImport.LockedHolidays)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                            Variant="Variant.Outlined">
+                            @day.Date.ToString("M/d") @day.Note
+                        </MudChip>
+                    }
+                    @foreach (var day in _lastImport.OpenedWorkdays)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                            Variant="Variant.Outlined">
+                            @day.Date.ToString("M/d") 補班
+                        </MudChip>
+                    }
+                </div>
+            </MudAlert>
+        }
+    </MudPaper>
+
     <MonthCalendar Month="_month" MonthChanged="OnMonthChanged">
         <CellTemplate Context="date">
             <CalendarCell Date="date" ShowMeals="false"
@@ -23,6 +95,61 @@
 @code {
     private DateTime _month = AppTime.Today;
     private List<LockedDate> _lockedDates = [];
+
+    // 可匯入的年度：今年與明年；下半年預設明年（政府約在年中公布隔年日曆）
+    private static int[] ImportYears =>
+        [AppTime.Today.Year, AppTime.Today.Year + 1];
+    private int _importYear = AppTime.Today.Month >= 7
+        ? AppTime.Today.Year + 1 : AppTime.Today.Year;
+    private bool _isImporting;
+    private HolidayImportService.ImportResult? _lastImport;
+
+    private async Task ImportFromGovernmentAsync()
+    {
+        await RunImportAsync(() =>
+            HolidayImportService.ImportFromGovernmentAsync(_importYear));
+    }
+
+    // 手動上傳從政府資料開放平臺下載的 CSV（自動下載失敗時使用）
+    private async Task ImportFromCsvAsync(IBrowserFile file)
+    {
+        await RunImportAsync(async () =>
+        {
+            using var reader = new StreamReader(
+                file.OpenReadStream(maxAllowedSize: 1024 * 1024));
+            var csv = await reader.ReadToEndAsync();
+            return await HolidayImportService.ImportFromCsvAsync(csv);
+        });
+    }
+
+    private async Task RunImportAsync(
+        Func<Task<HolidayImportService.ImportResult>> import)
+    {
+        _isImporting = true;
+        _lastImport = null;
+        try
+        {
+            _lastImport = await import();
+            await LoadMonthDataAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            Snackbar.Add($"無法連線到政府資料開放平臺（{ex.Message}），可改用「上傳 CSV」",
+                Severity.Error);
+        }
+        catch (TaskCanceledException)
+        {
+            Snackbar.Add("連線逾時，可稍後再試或改用「上傳 CSV」", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"匯入失敗：{ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isImporting = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

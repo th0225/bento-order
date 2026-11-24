@@ -79,7 +79,8 @@ dotnet ef migrations add <PascalCase名稱>
 - `Orders`：`(UserId, OrderDate)` 唯一，每人每天一筆。`UserId` 沒有外鍵。`MealCount` / `HasMeal` 是計算屬性，統計與「是否已訂」都以它為準。
   - 兩個 owned type：`BentoItem`（餐點 1）存在 `BentoName` / `BentoOption` 欄位，`AdditionalBentoItem`（餐點 2）存在 `AddBentoName` / `AddBentoOption` 欄位。
   - `Option` 目前沒有使用，是為 README 規劃中的飯量功能預留的。
-- `LockedDates`：管理員對單一日期的鎖定設定，`Date` 唯一，規則見下一節。
+- `LockedDates`：單一日期的鎖定設定，`Date` 唯一，規則見下一節。`Note` 是備註（例如國定假日名稱），顯示在月曆格子；管理員切換鎖定時會保留備註。
+  - 國定假日匯入（`Services/HolidayImportService.cs`，在 `/admin/date-manager` 操作）：從政府資料開放平臺（資料集 14718「中華民國政府行政機關辦公日曆表」）下載該年度 CSV，或由管理員上傳同一份 CSV。平日放假 → `IsLocked = true`，週末上班（補班）→ `IsLocked = false`，其他日期不動。
 - `SystemConfig`：key/value 設定，`Key` 唯一，可用的 key 定義在 `Models/AppConstants.cs` 的 `ConfigKeys`（LINE Token、兩個群組 ID、每日統計標題）。
 
 - `MealTypes`：餐點種類（`Name` 唯一、`SortOrder` 排序），管理員在 `/admin/meal-types` 新增、改名、刪除、排序。
@@ -132,14 +133,23 @@ dotnet ef migrations add <PascalCase名稱>
 
 `Services/AppPaths.cs` 決定資料庫與菜單圖片的位置：
 
-- 設定 `DataDirectory`（appsettings 或環境變數）時：資料庫是 `{DataDirectory}/app.db`，菜單是 `{DataDirectory}/menu.jpg`。正式機建議設在發佈資料夾之外。
-- 沒設定時沿用舊位置：`ConnectionStrings:DefaultConnection` 與 `wwwroot/menu.jpg`。
+- 設定 `DataDirectory`（appsettings 或環境變數）時：資料庫是 `{DataDirectory}/app.db`，菜單在 `{DataDirectory}/menus/`。正式機建議設在發佈資料夾之外。
+- 沒設定時：資料庫沿用 `ConnectionStrings:DefaultConnection`，菜單在資料庫所在資料夾的 `menus/`。
 
-菜單流程：
+每月菜單（`Services/MenuService.cs`，singleton）：
 
-1. `/admin/menu-manager` 只接受 jpg，先在瀏覽器端壓縮。
-2. `MenuUploadService` 寫到 `AppPaths.MenuFilePath`（先寫暫存檔再取代）。
-3. `Program.cs` 的 `/menu-image` 端點以 no-cache 回傳圖片；`MenuDialog` 在沒有菜單時顯示「尚未上傳菜單」。
+1. 每個月一個檔案 `menus/yyyy-MM.jpg`。`/admin/menu-manager` 選月份上傳（預設：20 日以後為下個月）、更換或刪除；只接受 jpg，先在瀏覽器端壓縮（最長邊 2000px）。
+2. `Program.cs` 的 `/menu-image/{yyyy-MM}` 端點以 no-cache 回傳圖片。
+3. AppBar 的「菜單」按鈕開啟 `MenuDialog`，顯示首頁月曆目前所在月份（`GlobalState.CalendarMonth`）的菜單，對話框內可切換月份。
+4. 舊版的單一菜單（`AppPaths.LegacyMenuFilePath`，例如 `wwwroot/menu.jpg`）會在啟動時由 `MenuService.MigrateLegacyMenu` 依上傳日期搬到對應月份。
+
+### 資料備份與系統通知
+
+- `Services/BackupService.cs`（singleton）：以 `VACUUM INTO` 備份資料庫，連同 `menus/` 壓縮成 `backups/backup-yyyyMMdd-HHmmss.zip`，保留 30 天。不要改成直接複製 `app.db`，因為資料庫開著時最新資料可能還在 WAL 檔。
+- `BackupBackgroundService`：每天 03:00（台灣時間）執行，失敗時用 `TelegramNotifier` 發通知。
+- `/admin/backups` 可立即備份與下載；下載端點 `/admin/backup-file/{name}` 只限管理員，檔名由 `BackupService.GetPath` 檢查以防路徑穿越。
+- `Services/TelegramNotifier.cs`：系統通知（目前只有備份失敗），Bot Token 與 Chat ID 存在 `SystemConfig`。每日統計與每月提醒仍用 LINE。
+- 還原步驟與異地備份建議見 [docs/backup-restore.md](docs/backup-restore.md)。
 
 ## 程式規則
 

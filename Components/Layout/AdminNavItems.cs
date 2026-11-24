@@ -16,5 +16,6 @@ public static class AdminNavItems
         new("/admin/date-manager", Icons.Material.Filled.LockClock, "日期鎖定"),
         new("/admin/menu-manager", Icons.Material.Filled.RestaurantMenu, "菜單管理"),
         new("/admin/system-config", Icons.Material.Filled.Settings, "系統設定"),
+        new("/admin/backups", Icons.Material.Filled.Backup, "資料備份"),
     ];
 }

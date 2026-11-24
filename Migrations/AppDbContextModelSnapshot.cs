@@ -29,6 +29,10 @@ namespace bento_order.Migrations
                     b.Property<bool>("IsLocked")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Date")

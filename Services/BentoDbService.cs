@@ -714,6 +714,45 @@ public class BentoDbService
         await db.SaveChangesAsync();
     }
 
+    // 批次寫入日期鎖定（匯入國定假日用）：每個日期新增或更新 IsLocked 與備註，
+    // 其他日期不受影響
+    public async Task ApplyLockedDatesAsync(IEnumerable<LockedDate> values)
+    {
+        var list = values
+            .Select(v => new LockedDate
+            {
+                Date = v.Date.Date,
+                IsLocked = v.IsLocked,
+                Note = v.Note ?? string.Empty
+            })
+            .ToList();
+        if (list.Count == 0)
+        {
+            return;
+        }
+
+        var dates = list.Select(v => v.Date).ToList();
+        using var db = _dbFactory.CreateDbContext();
+        var existing = await db.LockedDates
+            .Where(d => dates.Contains(d.Date))
+            .ToDictionaryAsync(d => d.Date);
+
+        foreach (var value in list)
+        {
+            if (existing.TryGetValue(value.Date, out var record))
+            {
+                record.IsLocked = value.IsLocked;
+                record.Note = value.Note;
+            }
+            else
+            {
+                db.LockedDates.Add(value);
+            }
+        }
+
+        await db.SaveChangesAsync();
+    }
+
     // 取得某個月份的日期鎖定設定
     public async Task<List<LockedDate>> GetLockedDatesAsync(int year,
         int month)

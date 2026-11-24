@@ -1,0 +1,125 @@
+@page "/admin/backups"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using bento_order.Services
+
+@inject BackupService BackupService
+@inject TelegramNotifier TelegramNotifier
+@inject ISnackbar Snackbar
+
+@* 資料備份：每天 03:00 自動備份（資料庫 + 每月菜單），保留 30 天 *@
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
+    <MudPaper Class="pa-4 mb-4" Style="background-color: #f8f9fa;">
+        <MudText Typo="Typo.subtitle1" Style="font-weight: 800;">
+            資料備份
+        </MudText>
+        <MudText Typo="Typo.body2" Class="mt-1">
+            每天 03:00 自動備份資料庫與每月菜單，保留最近
+            @BackupService.RetentionDays 天。備份與資料庫在同一台主機，
+            建議不定期下載一份存到其他地方。
+        </MudText>
+
+        @if (BackupService.LastRunAt.HasValue)
+        {
+            @if (BackupService.LastError == null)
+            {
+                <MudAlert Severity="Severity.Success" Dense Class="mt-3">
+                    最近一次備份成功：@BackupService.LastRunAt.Value.ToString("yyyy/MM/dd HH:mm")
+                </MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error" Dense Class="mt-3">
+                    最近一次備份失敗（@BackupService.LastRunAt.Value.ToString("yyyy/MM/dd HH:mm")）：
+                    @BackupService.LastError
+                </MudAlert>
+            }
+        }
+
+        @if (!_telegramConfigured)
+        {
+            <MudAlert Severity="Severity.Warning" Dense Class="mt-3">
+                尚未設定 Telegram，備份失敗時不會收到通知（請到「系統設定」設定）。
+            </MudAlert>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3"
+            StartIcon="@Icons.Material.Filled.Backup"
+            Disabled="@_isRunning" OnClick="RunBackupAsync">
+            @(_isRunning ? "備份中..." : "立即備份")
+        </MudButton>
+    </MudPaper>
+
+    <MudTable Items="_backups" Hover Dense Elevation="1"
+        Style="background-color: #f8f9fa;">
+        <HeaderContent>
+            <MudTh>備份時間</MudTh>
+            <MudTh>大小</MudTh>
+            <MudTh Style="text-align: right">下載</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="備份時間">
+                @context.CreatedAt.ToString("yyyy/MM/dd HH:mm:ss")
+            </MudTd>
+            <MudTd DataLabel="大小">@FormatSize(context.Size)</MudTd>
+            <MudTd DataLabel="下載" Style="text-align: right">
+                @* download 屬性讓 Blazor 不攔截這個連結，直接下載檔案 *@
+                <MudIconButton Icon="@Icons.Material.Filled.Download"
+                    Color="Color.Primary"
+                    Href="@($"/admin/backup-file/{context.Name}")"
+                    download="@context.Name" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>目前沒有備份。</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<BackupService.BackupFile> _backups = [];
+    private bool _isRunning;
+    private bool _telegramConfigured = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _backups = BackupService.List();
+        try
+        {
+            _telegramConfigured = await TelegramNotifier.IsConfiguredAsync();
+        }
+        catch
+        {
+            _telegramConfigured = false;
+        }
+    }
+
+    private async Task RunBackupAsync()
+    {
+        _isRunning = true;
+        try
+        {
+            var backup = await BackupService.RunAsync();
+            Snackbar.Add($"備份完成（{FormatSize(backup.Size)}）", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"備份失敗：{ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isRunning = false;
+            _backups = BackupService.List();
+        }
+    }
+
+    // 注意：Razor 會把 switch 運算式中的「< 1024」當成標籤，所以用 if
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024)
+        {
+            return $"{bytes / 1024.0 / 1024.0:F1} MB";
+        }
+
+        return bytes >= 1024 ? $"{bytes / 1024.0:F1} KB" : $"{bytes} B";
+    }
+}

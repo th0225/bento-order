@@ -40,6 +40,9 @@ public class GlobalState
         NotifyStateChanged();
     }
 
+    // 首頁月曆目前顯示的月份（AppBar 的「菜單」按鈕依此顯示該月菜單），null = 本月
+    public DateTime? CalendarMonth { get; set; }
+
     // 是否必須先修改密碼才能使用系統（由 MainLayout 從資料庫載入）
     public bool MustChangePassword { get; private set; }
 

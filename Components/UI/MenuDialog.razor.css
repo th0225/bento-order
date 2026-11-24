@@ -1,5 +1,12 @@
 /* MenuDialog 專屬樣式（CSS isolation） */
 
+.month-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
 .zoom-toolbar {
     display: flex;
     justify-content: center;

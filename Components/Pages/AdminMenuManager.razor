@@ -2,101 +2,168 @@
 @attribute [Authorize(Roles = Roles.Admin)]
 @using bento_order.Services
 
-@inject MenuUploadService MenuUploadService
+@inject MenuService MenuService
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
+@* 每月菜單管理：選月份、上傳（瀏覽器端壓縮）、刪除 *@
+<div class="menu-manager">
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
-    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
-        
-        @if (_previewUrl == null)
+    <MudPaper Class="pa-4 mb-4" Style="background-color: #f8f9fa;">
+        <div class="month-nav">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                OnClick="@(() => SelectMonth(_month.AddMonths(-1)))" />
+            <MudText Typo="Typo.h6" Style="font-weight: 800;">
+                @_month.ToString("yyyy 年 M 月")菜單
+            </MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                OnClick="@(() => SelectMonth(_month.AddMonths(1)))" />
+        </div>
+
+        @if (_monthsWithMenu.Count > 0)
         {
-            <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles"
-                Accept=".jpg,.jpeg">
-                <CustomContent>
-                    <MudButton Variant="Variant.Filled"
-                        Color="Color.Primary" HtmlTag="label"
-                        StartIcon="@Icons.Material.Filled.PhotoCamera"
-                        OnClick="@context.OpenFilePickerAsync"
-                        Class="px-8 py-3"
-                        Style="border-radius: 25px;
-                            background-color: #795548;">
-                        選擇照片
-                    </MudButton>
-                </CustomContent>
-                <SelectedTemplate />
-            </MudFileUpload>
-        }
-        else
-        {
-            <div class="relative w-100">
-                <MudImage Src="@_previewUrl"
-                    Alt="菜單預覽" Elevation="2"
-                    Class="rounded-lg"
-                    Style="max-width: 100%; max-height: 400px;
-                        object-fit: contain;" />
-                <MudIconButton Icon="@Icons.Material.Filled.Cancel"
-                    Color="Color.Error"
-                    OnClick="ClearPreview"
-                    Class="absolute"
-                    Style="top: -10px; right: -10px;
-                        background-color: white;" />
+            <div class="d-flex flex-wrap align-center gap-1 mt-2">
+                <MudText Typo="Typo.caption" Class="mr-1">已上傳：</MudText>
+                @foreach (var month in _monthsWithMenu.Take(12))
+                {
+                    <MudChip T="string" Size="Size.Small"
+                        Color="@(month == _month ? Color.Primary : Color.Default)"
+                        OnClick="@(() => SelectMonth(month))">
+                        @month.ToString("yyyy/MM")
+                    </MudChip>
+                }
             </div>
         }
     </MudPaper>
 
-    @if (_previewUrl != null)
-    {
-        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth
-            Size="Size.Large" OnClick="SaveMenuImage"
-            Disabled="@_isUploading"
-            Style="border-radius: 12px; height: 56px; font-weight: 800;">
-            @if (_isUploading)
+    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+        @if (_previewUrl != null)
+        {
+            @* 新選的圖片預覽 *@
+            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                預覽（尚未上傳）
+            </MudText>
+            <div class="preview-box">
+                <MudImage Src="@_previewUrl" Alt="菜單預覽" Elevation="2"
+                    Class="rounded-lg preview-image" />
+                <MudIconButton Icon="@Icons.Material.Filled.Cancel"
+                    Color="Color.Error" OnClick="ClearPreview"
+                    Class="preview-cancel" />
+            </div>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth
+                Size="Size.Large" OnClick="SaveMenuImage" Class="mt-4"
+                Disabled="@_isUploading"
+                Style="border-radius: 12px; height: 56px; font-weight: 800;">
+                @if (_isUploading)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small"
+                        Indeterminate="true" />
+                    <MudText Class="ms-2">正在上傳...</MudText>
+                }
+                else
+                {
+                    <MudText>
+                        確認上傳為 @_month.ToString("yyyy 年 M 月")菜單
+                    </MudText>
+                }
+            </MudButton>
+        }
+        else
+        {
+            @if (_hasMenu)
             {
-                <MudProgressCircular Class="ms-n1" Size="Size.Small"
-                    Indeterminate="true" />
-                <MudText Class="ms-2">正在上傳...</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">目前的菜單</MudText>
+                <MudImage Src="@($"{MenuService.ImageUrl(_month)}?v={_version}")"
+                    Alt="目前的菜單" Elevation="2"
+                    Class="rounded-lg preview-image mb-4" />
             }
             else
             {
-                <MudText>確認上傳</MudText>
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    @_month.ToString("M 月")的菜單尚未上傳
+                </MudAlert>
             }
-        </MudButton>
-    }
-</MudContainer>
 
-<style>
-    .relative { position: relative; }
-    .absolute { position: absolute; }
-    .w-100 { width: 100%; }
-</style>
+            <div class="d-flex flex-wrap gap-2">
+                <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles"
+                    Accept=".jpg,.jpeg">
+                    <CustomContent>
+                        <MudButton Variant="Variant.Filled"
+                            Color="Color.Primary" HtmlTag="label"
+                            StartIcon="@Icons.Material.Filled.PhotoCamera"
+                            OnClick="@context.OpenFilePickerAsync"
+                            Class="px-8 py-3"
+                            Style="border-radius: 25px;
+                                background-color: #795548;">
+                            @(_hasMenu ? "更換照片" : "選擇照片")
+                        </MudButton>
+                    </CustomContent>
+                    <SelectedTemplate />
+                </MudFileUpload>
+
+                @if (_hasMenu)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                        StartIcon="@Icons.Material.Filled.Delete"
+                        Class="py-3" Style="border-radius: 25px;"
+                        OnClick="DeleteMenuAsync">
+                        刪除這個月的菜單
+                    </MudButton>
+                }
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+</div>
 
 @code {
+    // 選擇的月份（該月 1 日）
+    private DateTime _month = MenuService.DefaultMenuMonth(AppTime.Today);
+    private bool _hasMenu;
+    private List<DateTime> _monthsWithMenu = [];
     // 圖片預覽網址
     private string? _previewUrl;
     // 是否正在上傳
     private bool _isUploading = false;
     // 壓縮後的圖檔
     private byte[]? _compressedData;
+    // 上傳或刪除後改變，讓瀏覽器重新讀取圖片
+    private long _version = DateTime.UtcNow.Ticks;
 
-    // 上傳檔案至串流
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh()
+    {
+        _hasMenu = MenuService.Exists(_month);
+        _monthsWithMenu = MenuService.GetMonthsWithMenu();
+        _version = DateTime.UtcNow.Ticks;
+    }
+
+    private void SelectMonth(DateTime month)
+    {
+        _month = new DateTime(month.Year, month.Month, 1);
+        Refresh();
+    }
+
+    // 選擇照片：在瀏覽器端壓縮後預覽
     private async Task UploadFiles(IBrowserFile file)
     {
         try
         {
-            // 開啟串流
             var stream = file.OpenReadStream(
                 maxAllowedSize: 1024 * 1024 * 15);
-            
+
             // 封裝JS可讀取的參考
             using var streamRef =
                 new DotNetStreamReference(stream);
 
-            // 呼叫JS進行手機端運算
+            // 呼叫JS壓縮（菜單可放大檢視，保留較高解析度）
             var result = await JS.InvokeAsync<byte[]>(
                 "compressImage",
                 streamRef,
-                1200, 1200, 0.7);
+                2000, 2000, 0.8);
 
             if (result != null && result.Length > 0)
             {
@@ -105,7 +172,6 @@
                     $"data:image/jpeg;base64,{Convert.ToBase64String(
                         _compressedData
                     )}";
-                await InvokeAsync(StateHasChanged);
 
                 Snackbar.Add("已產生預覽，確認後請按「確認上傳」", Severity.Info);
             }
@@ -134,11 +200,12 @@
         _isUploading = true;
         try
         {
-            using var ms = new MemoryStream(_compressedData!);
-            await MenuUploadService.UploadMenuAsync(ms);
+            using var ms = new MemoryStream(_compressedData);
+            await MenuService.UploadAsync(_month, ms);
 
-            Snackbar.Add("菜單上傳成功", Severity.Success);
+            Snackbar.Add($"{_month:yyyy 年 M 月}菜單上傳成功", Severity.Success);
             ClearPreview();
+            Refresh();
         }
         catch (Exception ex)
         {
@@ -147,6 +214,32 @@
         finally
         {
             _isUploading = false;
+        }
+    }
+
+    private async Task DeleteMenuAsync()
+    {
+        var parameters = new DialogParameters<CustomDialog>
+        {
+            { x => x.Title, "刪除菜單" },
+            { x => x.Content, $"確定要刪除 {_month:yyyy 年 M 月}的菜單嗎？" }
+        };
+        var dialog = await DialogService.ShowAsync<CustomDialog>("",
+            parameters, new DialogOptions { MaxWidth = MaxWidth.ExtraSmall });
+        if (await dialog.Result is not { Canceled: false })
+        {
+            return;
+        }
+
+        try
+        {
+            MenuService.Delete(_month);
+            Snackbar.Add("已刪除菜單", Severity.Info);
+            Refresh();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"刪除失敗: {ex.Message}", Severity.Error);
         }
     }
 }

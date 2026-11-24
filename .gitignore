@@ -28,5 +28,8 @@ Thumbs.db
 node_modules/
 .npm/
 
-## 菜單圖片
+## 執行期資料：資料庫、每月菜單、備份（預設都在 database/ 底下）
+database/
+
+## 舊版菜單圖片
 wwwroot/menu.jpg

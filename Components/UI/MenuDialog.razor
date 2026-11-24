@@ -1,13 +1,26 @@
+@using bento_order.Services
 @inject IJSRuntime JS
+@inject MenuService MenuService
 
-@* 本月菜單：可縮放（滾輪、雙指、雙擊、按鈕）與拖曳移動，邏輯在 App.razor 的 bentoZoom *@
+@* 每月菜單：可切換月份；圖片可縮放（滾輪、雙指、雙擊、按鈕）與拖曳移動，
+   縮放邏輯在 App.razor 的 bentoZoom *@
 <MudDialog Style="background-color: #FFFDF7; border-radius: 20px;">
     <DialogContent>
-        @if (string.IsNullOrEmpty(ImageUrl))
+        <div class="month-nav">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                OnClick="@(() => ChangeMonth(-1))" />
+            <MudText Typo="Typo.h6" Style="font-weight: 800;">
+                @_month.ToString("yyyy 年 M 月")菜單
+            </MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                OnClick="@(() => ChangeMonth(1))" />
+        </div>
+
+        @if (!_hasMenu)
         {
-            <div class="d-flex justify-center">
+            <div class="d-flex justify-center my-8">
                 <MudAlert Severity="Severity.Info">
-                    尚未上傳菜單
+                    @_month.ToString("M 月")的菜單尚未上傳
                 </MudAlert>
             </div>
         }
@@ -29,7 +42,8 @@
             </div>
 
             <div class="zoom-container" @ref="_container">
-                <img src="@ImageUrl" alt="本月菜單" draggable="false" />
+                <img src="@MenuService.ImageUrl(_month)"
+                    alt="@($"{_month:yyyy 年 M 月}菜單")" draggable="false" />
             </div>
 
             <MudText Typo="Typo.caption" Align="Align.Center"
@@ -53,23 +67,49 @@
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = default!;
 
+    // 一開始顯示的月份（只看年、月）
     [Parameter]
-    public string? ImageUrl { get; set; }
+    public DateTime Month { get; set; }
 
+    private DateTime _month;
+    private bool _hasMenu;
     private ElementReference _container;
+    // 換月份後要把縮放重設成完整顯示
+    private bool _resetZoom;
+
+    protected override void OnInitialized()
+    {
+        _month = new DateTime(Month.Year, Month.Month, 1);
+        _hasMenu = MenuService.Exists(_month);
+    }
+
+    private void ChangeMonth(int offset)
+    {
+        _month = _month.AddMonths(offset);
+        _hasMenu = MenuService.Exists(_month);
+        _resetZoom = true;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !string.IsNullOrEmpty(ImageUrl))
+        if (!_hasMenu)
         {
-            try
+            return;
+        }
+
+        try
+        {
+            // attach 重複呼叫沒有影響（從「尚未上傳」切到有菜單時是新的元素）
+            await JS.InvokeVoidAsync("bentoZoom.attach", _container);
+            if (_resetZoom)
             {
-                await JS.InvokeVoidAsync("bentoZoom.attach", _container);
+                _resetZoom = false;
+                await JS.InvokeVoidAsync("bentoZoom.reset", _container);
             }
-            catch (JSException)
-            {
-                // 縮放功能失效時仍可看圖，不影響使用
-            }
+        }
+        catch (JSException)
+        {
+            // 縮放功能失效時仍可看圖，不影響使用
         }
     }
 

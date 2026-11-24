@@ -23,6 +23,14 @@
         }
     </div>
 
+    @* 國定假日名稱、補班等備註 *@
+    @if (!string.IsNullOrEmpty(_lockRecord?.Note))
+    {
+        <div class="day-note @(_lockRecord.IsLocked ? "" : "day-note-open")">
+            @_lockRecord.Note
+        </div>
+    }
+
     @if (ShowMeals)
     {
         <div class="@(_isFinalLocked ? "rest-mode" : "cell-body")">
@@ -217,6 +225,8 @@
         try
         {
             await BentoDbService.SaveLockedDateAsync(lockedDate);
+            // 保留原本的備註（例如國定假日名稱）
+            lockedDate.Note = _lockRecord?.Note ?? string.Empty;
             _lockRecord = lockedDate;
         }
         catch (Exception ex)

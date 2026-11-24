@@ -38,8 +38,16 @@ builder.Services.AddScoped<GlobalState>();
 builder.Services.AddScoped<BentoDbService>();
 // 餐點統計並Line通知
 builder.Services.AddScoped<BentoReportService>();
-// 菜單上傳
-builder.Services.AddScoped<MenuUploadService>();
+// 每月菜單圖片
+builder.Services.AddSingleton<MenuService>();
+// 匯入政府辦公日曆（國定假日、補班日）
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<HolidayImportService>();
+// Telegram 系統通知（備份失敗）
+builder.Services.AddScoped<TelegramNotifier>();
+// 資料備份（每天 03:00，保留 30 天）
+builder.Services.AddSingleton<BackupService>();
+builder.Services.AddHostedService<BackupBackgroundService>();
 
 // 餐點資料
 builder.Services.AddSingleton<IMealProvider, MealProvider>();
@@ -101,6 +109,9 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
+
+    // 舊版單一菜單搬到對應月份
+    scope.ServiceProvider.GetRequiredService<MenuService>().MigrateLegacyMenu();
 }
 
 // Configure the HTTP request pipeline.
@@ -198,19 +209,35 @@ app.MapPost("/auth/logout", async (HttpContext httpContext) =>
     return Results.Ok();
 });
 
-// 菜單圖片（位置見 AppPaths，不快取以免看到舊菜單）。
-// 不用 /menu.jpg，避免被 UseStaticFiles 搶先回傳 wwwroot 裡的舊檔
-app.MapGet("/menu-image", (AppPaths paths,
-    HttpContext httpContext) =>
+// 每月菜單圖片，例如 /menu-image/2026-12（位置見 AppPaths，no-cache 以免看到舊菜單）
+app.MapGet("/menu-image/{month:regex(^\\d{{4}}-\\d{{2}}$)}", (string month,
+    AppPaths paths, HttpContext httpContext) =>
 {
-    if (!paths.MenuExists)
+    if (!DateTime.TryParseExact(month, "yyyy-MM", null,
+        System.Globalization.DateTimeStyles.None, out var date))
+    {
+        return Results.NotFound();
+    }
+
+    var path = paths.MenuFilePath(date);
+    if (!File.Exists(path))
     {
         return Results.NotFound();
     }
 
     httpContext.Response.Headers.CacheControl = "no-cache";
-    return Results.File(paths.MenuFilePath, "image/jpeg");
+    return Results.File(path, "image/jpeg");
 });
+
+// 下載備份檔（僅管理員），檔名由 BackupService.GetPath 檢查格式，避免路徑穿越
+app.MapGet("/admin/backup-file/{name}", (string name,
+    BackupService backupService) =>
+{
+    var path = backupService.GetPath(name);
+    return path == null
+        ? Results.NotFound()
+        : Results.File(path, "application/zip", name);
+}).RequireAuthorization(policy => policy.RequireRole(Roles.Admin));
 
 // --- 4. 端點對應 ---
 app.MapStaticAssets();

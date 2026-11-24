@@ -7,7 +7,7 @@
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
-    <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-2" Style="background-color: var(--bento-panel-bg);">
         <MudDatePicker Label="選擇日期" Date="_selectedDate"
             PickerVariant="PickerVariant.Dialog"
             DateChanged="OnDateChanged"
@@ -15,7 +15,7 @@
     </MudPaper>
 
     <MudTable Items="_userOrders" Hover Dense FixedHeader Height="600px"
-        Style="background-color: #f8f9fa;">
+        Style="background-color: var(--bento-panel-bg);">
         <HeaderContent>
             <MudTh>姓名</MudTh>
             <MudTh>狀態</MudTh>

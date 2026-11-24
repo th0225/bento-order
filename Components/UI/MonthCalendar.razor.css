@@ -18,7 +18,7 @@
 .weekday-header {
     text-align: center;
     font-weight: 800;
-    color: #BCAA99;
+    color: var(--mud-palette-text-secondary);
     font-size: 0.85rem;
     padding-bottom: 8px;
 }

@@ -1,27 +1,60 @@
 /* ============================================================
+   0. 配色變數（亮色 / 暗色）
+   MudBlazor 配色以外的顏色。<html class="bento-dark"> 時使用暗色，
+   由 App.razor（cookie / 系統設定）與 MainLayout 的切換按鈕控制。
+   能用 MudBlazor 的 var(--mud-palette-*) 時優先用那個。
+   ============================================================ */
+:root {
+    --bento-panel-bg: #F8F9FA;          /* 管理頁的灰色面板 */
+    --bento-appbar-bg: rgba(247, 243, 238, 0.9);
+    --bento-appbar-border: #D7CCC8;
+    --bento-hover-bg: #FFF9F2;          /* 格子、表格列滑過 */
+    --bento-nav-hover-bg: #FFF3E0;      /* 側邊選單滑過 */
+    --bento-locked-bg: #DBD5CF;         /* 已鎖定的日期格子 */
+    --bento-today-bg: #FFE0B2;
+    --bento-today-text: #E65100;
+    --bento-dialog-bg: #FFFDF7;         /* 菜單對話框 */
+    --bento-zoom-bg: #F3EEE7;           /* 菜單圖片底色 */
+}
+
+:root.bento-dark {
+    --bento-panel-bg: #2A2420;
+    --bento-appbar-bg: rgba(34, 30, 26, 0.9);
+    --bento-appbar-border: #4A3F37;
+    --bento-hover-bg: #352C26;
+    --bento-nav-hover-bg: #3A3029;
+    --bento-locked-bg: #3A332E;
+    --bento-today-bg: #5D4037;
+    --bento-today-text: #FFCC80;
+    --bento-dialog-bg: #2A2420;
+    --bento-zoom-bg: #1C1916;
+    color-scheme: dark;
+}
+
+/* ============================================================
    1. 全域與基礎設定 (Global & Base)
    ============================================================ */
 body {
     /* 使用淡燕麥色背景，讓白色卡片能跳脫出來 */
-    background-color: #F7F3EE; 
-    color: #4E342E;
+    background-color: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
     font-family: "Noto Sans TC", "微軟正黑體", sans-serif;
 }
 
 /* 統一全域輸入框底線顏色 */
 .mud-input.mud-input-underline:before {
-    border-bottom: 1px solid #E0D7C6 !important;
+    border-bottom: 1px solid var(--mud-palette-lines-default) !important;
 }
 
 /* 表格與清單 Hover 效果 */
 .mud-table-row:hover {
-    background-color: #FFF9F2 !important;
+    background-color: var(--bento-hover-bg) !important;
 }
 
 /* 標題強化 */
 .login-title {
     font-weight: 700 !important;
-    color: #37474F !important;
+    color: var(--mud-palette-text-primary) !important;
     letter-spacing: 0.5px;
 }
 
@@ -40,8 +73,8 @@ body {
 /* 透明頂部導航欄 (搭配 Class="main-appbar") */
 .main-appbar {
     /* 奶油色半透明質感 */
-    background-color: rgba(247, 243, 238, 0.9) !important;
-    border-bottom: 1.5px solid #D7CCC8 !important;
+    background-color: var(--bento-appbar-bg) !important;
+    border-bottom: 1.5px solid var(--bento-appbar-border) !important;
     box-shadow: none !important;
     color: var(--mud-palette-appbar-text) !important;
     backdrop-filter: blur(8px);
@@ -72,14 +105,14 @@ body {
 
 /* 側邊欄邊框與背景 */
 .mud-drawer {
-    border-right: 1px solid #E0D7C6 !important;
-    background-color: #F7F3EE !important;
+    border-right: 1px solid var(--mud-palette-lines-default) !important;
+    background-color: var(--mud-palette-background) !important;
 }
 
 /* 側邊欄標題區：對齊 Appbar 高度與線條 */
 .mud-drawer-header {
     height: 64px;
-    border-bottom: 1px solid #E0D7C6;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
     display: flex;
     align-items: center;
     background-color: transparent !important;
@@ -104,7 +137,7 @@ body {
     margin-bottom: 6px !important;
     border-radius: 12px !important;
     padding: 10px 16px !important;
-    color: #5D4037 !important;
+    color: var(--mud-palette-drawer-text) !important;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 
@@ -115,7 +148,7 @@ body {
 }
 
 .mud-nav-link:hover {
-    background-color: #FFF3E0 !important;
+    background-color: var(--bento-nav-hover-bg) !important;
     transform: translateX(4px);
 }
 
@@ -151,7 +184,7 @@ body {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    color: #A1887F !important;
+    color: var(--mud-palette-text-secondary) !important;
     margin-bottom: 8px;
     padding-left: 16px;
 }
@@ -162,14 +195,14 @@ body {
 
 /* 月曆格子 Hover 狀態：邊框變色並微幅放大 */
 .cell-wrapper {
-    background-color: #FFFFFF;
-    border: 1px solid #E0D7C6;
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cell-wrapper:hover {
     border-color: #FF9800 !important;
-    background-color: #FFF9F2 !important;
+    background-color: var(--bento-hover-bg) !important;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 152, 0, 0.1) !important;
 }

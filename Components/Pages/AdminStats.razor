@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
-    <MudPaper Class="pa-4 mb-2" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-2" Style="background-color: var(--bento-panel-bg);">
         <MudDatePicker Label="選擇日期" Date="_selectedDate"
                     PickerVariant="PickerVariant.Dialog"
                     DateChanged="OnDateChanged"
@@ -24,7 +24,7 @@
     else
     {
         <MudTable Items="_stats" Breakpoint="Breakpoint.Sm" Elevation="2"
-            Hover Dense Style="background-color: #f8f9fa;">
+            Hover Dense Style="background-color: var(--bento-panel-bg);">
             <HeaderContent>
                 <MudTh>餐點名稱</MudTh>
                 <MudTh>數量</MudTh>
@@ -39,7 +39,7 @@
     }
 
     <MudText Typo="Typo.h5" Class="mb-4 mt-6">週期總量結算</MudText>
-    <MudPaper Class="pa-4" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4" Style="background-color: var(--bento-panel-bg);">
         <MudGrid >
             <MudItem xs="12" sm="4">
                 <MudDatePicker Label="開始日期" @bind-Date="_periodStart" />
@@ -59,7 +59,7 @@
         {
             <div class="mt-6 d-flex justify-center align-center">
                 <MudPaper Class="pa-4 d-flex align-center"
-                    Style="border: 2px dashed #666;">
+                    Style="border: 2px dashed var(--mud-palette-lines-inputs);">
                     <MudIcon Icon="@Icons.Material.Filled.Restaurant"
                         Color="Color.Dark" Size="Size.Large" Class="mr-3" />
                     <div>

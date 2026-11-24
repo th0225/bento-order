@@ -1,20 +1,16 @@
 namespace bento_order.Services;
 
-// 每天 03:00（台灣時間）自動備份；失敗時發 Telegram 通知
+// 每天 03:00（台灣時間）自動備份。
+// 失敗時寫入 log，並由 /admin/backups 顯示最近一次的結果（BackupService.LastError）
 public class BackupBackgroundService : BackgroundService
 {
     private const int BackupHour = 3;
 
-    private readonly IServiceProvider _serviceProvider;
     private readonly BackupService _backupService;
-    private readonly ILogger<BackupBackgroundService> _logger;
 
-    public BackupBackgroundService(IServiceProvider serviceProvider,
-        BackupService backupService, ILogger<BackupBackgroundService> logger)
+    public BackupBackgroundService(BackupService backupService)
     {
-        _serviceProvider = serviceProvider;
         _backupService = backupService;
-        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(
@@ -39,36 +35,10 @@ public class BackupBackgroundService : BackgroundService
             {
                 return;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                await NotifyFailureAsync(ex, stoppingToken);
+                // BackupService 已記錄 log 與 LastError，隔天會再試一次
             }
-        }
-    }
-
-    private async Task NotifyFailureAsync(Exception error,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var notifier = scope.ServiceProvider
-                .GetRequiredService<TelegramNotifier>();
-
-            if (!await notifier.IsConfiguredAsync())
-            {
-                _logger.LogWarning("備份失敗，但尚未設定 Telegram，無法通知");
-                return;
-            }
-
-            await notifier.SendAsync(
-                $"⚠️ 便當訂餐系統：資料庫備份失敗（{AppTime.Now:yyyy/MM/dd HH:mm}）\n" +
-                $"{error.Message}",
-                cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "備份失敗通知發送失敗");
         }
     }
 }

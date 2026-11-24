@@ -3,12 +3,11 @@
 @using bento_order.Services
 
 @inject BackupService BackupService
-@inject TelegramNotifier TelegramNotifier
 @inject ISnackbar Snackbar
 
 @* 資料備份：每天 03:00 自動備份（資料庫 + 每月菜單），保留 30 天 *@
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
-    <MudPaper Class="pa-4 mb-4" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-4" Style="background-color: var(--bento-panel-bg);">
         <MudText Typo="Typo.subtitle1" Style="font-weight: 800;">
             資料備份
         </MudText>
@@ -35,13 +34,6 @@
             }
         }
 
-        @if (!_telegramConfigured)
-        {
-            <MudAlert Severity="Severity.Warning" Dense Class="mt-3">
-                尚未設定 Telegram，備份失敗時不會收到通知（請到「系統設定」設定）。
-            </MudAlert>
-        }
-
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3"
             StartIcon="@Icons.Material.Filled.Backup"
             Disabled="@_isRunning" OnClick="RunBackupAsync">
@@ -50,7 +42,7 @@
     </MudPaper>
 
     <MudTable Items="_backups" Hover Dense Elevation="1"
-        Style="background-color: #f8f9fa;">
+        Style="background-color: var(--bento-panel-bg);">
         <HeaderContent>
             <MudTh>備份時間</MudTh>
             <MudTh>大小</MudTh>
@@ -78,19 +70,10 @@
 @code {
     private List<BackupService.BackupFile> _backups = [];
     private bool _isRunning;
-    private bool _telegramConfigured = true;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _backups = BackupService.List();
-        try
-        {
-            _telegramConfigured = await TelegramNotifier.IsConfiguredAsync();
-        }
-        catch
-        {
-            _telegramConfigured = false;
-        }
     }
 
     private async Task RunBackupAsync()

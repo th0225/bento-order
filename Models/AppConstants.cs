@@ -18,8 +18,4 @@ public static class ConfigKeys
     public const string LineOrderId = "LineOrderId";
     // 每日訂餐統計訊息的標題
     public const string LineReportTitle = "LineReportTitle";
-    // Telegram Bot Token（系統通知，例如備份失敗）
-    public const string TelegramBotToken = "TelegramBotToken";
-    // Telegram 接收通知的 Chat ID（個人或群組）
-    public const string TelegramChatId = "TelegramChatId";
 }

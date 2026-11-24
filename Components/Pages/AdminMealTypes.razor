@@ -8,7 +8,7 @@
 
 @* 管理餐點種類：新增、改名（會一併更新既有訂單）、刪除、調整順序 *@
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-2">
-    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-6" Style="background-color: var(--bento-panel-bg);">
         <div class="d-flex align-center gap-2">
             <MudTextField @bind-Value="_newName" Label="新增餐點種類"
                 Variant="Variant.Outlined" Margin="Margin.Dense" Immediate
@@ -25,7 +25,7 @@
     </MudPaper>
 
     <MudTable Items="_mealTypes" Hover Dense Elevation="1"
-        Style="background-color: #f8f9fa;" Loading="@(_mealTypes == null)">
+        Style="background-color: var(--bento-panel-bg);" Loading="@(_mealTypes == null)">
         <HeaderContent>
             <MudTh>餐點名稱</MudTh>
             <MudTh Style="text-align: right">操作</MudTh>

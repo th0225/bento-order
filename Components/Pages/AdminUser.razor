@@ -8,7 +8,7 @@
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
-    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-6" Style="background-color: var(--bento-panel-bg);">
         <MudGrid>
             <MudItem xs="12" sm="3">
                 <MudTextField @bind-Value="_newUser.Username" Label="帳號"
@@ -50,7 +50,7 @@
     </MudPaper>
 
     <MudTable Items="_users" Hover="true" Elevation="1" Class="mt-4"
-        Style="background-color: #f8f9fa;">
+        Style="background-color: var(--bento-panel-bg);">
         <HeaderContent>
             <MudTh>帳號</MudTh>
             <MudTh>姓名</MudTh>

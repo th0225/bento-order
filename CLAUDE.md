@@ -143,12 +143,11 @@ dotnet ef migrations add <PascalCase名稱>
 3. AppBar 的「菜單」按鈕開啟 `MenuDialog`，顯示首頁月曆目前所在月份（`GlobalState.CalendarMonth`）的菜單，對話框內可切換月份。
 4. 舊版的單一菜單（`AppPaths.LegacyMenuFilePath`，例如 `wwwroot/menu.jpg`）會在啟動時由 `MenuService.MigrateLegacyMenu` 依上傳日期搬到對應月份。
 
-### 資料備份與系統通知
+### 資料備份
 
 - `Services/BackupService.cs`（singleton）：以 `VACUUM INTO` 備份資料庫，連同 `menus/` 壓縮成 `backups/backup-yyyyMMdd-HHmmss.zip`，保留 30 天。不要改成直接複製 `app.db`，因為資料庫開著時最新資料可能還在 WAL 檔。
-- `BackupBackgroundService`：每天 03:00（台灣時間）執行，失敗時用 `TelegramNotifier` 發通知。
+- `BackupBackgroundService`：每天 03:00（台灣時間）執行。失敗時寫入 log，`/admin/backups` 會顯示最近一次的結果（沒有主動通知）。
 - `/admin/backups` 可立即備份與下載；下載端點 `/admin/backup-file/{name}` 只限管理員，檔名由 `BackupService.GetPath` 檢查以防路徑穿越。
-- `Services/TelegramNotifier.cs`：系統通知（目前只有備份失敗），Bot Token 與 Chat ID 存在 `SystemConfig`。每日統計與每月提醒仍用 LINE。
 - 還原步驟與異地備份建議見 [docs/backup-restore.md](docs/backup-restore.md)。
 
 ## 程式規則
@@ -164,7 +163,8 @@ dotnet ef migrations add <PascalCase名稱>
 5. 不要直接用 SQL 或 EF 修改 `MealTypes` 的名稱或刪除資料，一律透過 `BentoDbService` 的餐點種類方法，才能維持訂單中的名稱一致。
 6. 角色與 `SystemConfig` 的 key 一律用 `Models/AppConstants.cs` 的 `Roles` / `ConfigKeys`，不要再寫字串。新增的常數也放在那裡。
 7. 樣式規則：
-   - 顏色優先使用 `MainLayout.razor` 中 `CustomTheme` 的 palette（或 `var(--mud-palette-*)`），不要再新增寫死的色碼。
+   - 有亮色與暗色兩種主題，**不要寫死色碼**：優先用 MudBlazor 的 `var(--mud-palette-*)`（`MainLayout.razor` 的 `CustomTheme` 定義 `PaletteLight` 與 `PaletteDark`）；MudBlazor 沒有的顏色，在 `wwwroot/app.css` 開頭的 `--bento-*` 變數新增亮色與暗色兩個值（`:root` 與 `:root.bento-dark`）。
+   - 主題切換：AppBar 的按鈕 → `GlobalState.SetDarkMode` + JS `bentoTheme.set`（寫入 `bento-theme` cookie、切換 `<html>` 的 `bento-dark` class）。`App.razor` 讀 cookie 讓伺服器直接輸出對應主題；沒有 cookie 時跟隨系統設定。
    - 元件專屬的 CSS 放在 `元件名.razor.css`。`::deep` 只在 `.razor.css` 裡有效；寫在元件內的 `<style>` 會變成全域樣式，而且每個實例都會重複插入。
    - 手機版斷點沿用 960px 與 MudBlazor 的 `d-md-*` 類別。
 8. 執行期間產生的檔案（例如資料庫、上傳的圖片）的路徑一律由 `AppPaths` 提供，不要用 `Directory.GetCurrentDirectory()` 自己組。

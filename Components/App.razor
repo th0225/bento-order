@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-Hant-TW">
+<html lang="zh-Hant-TW" class="@(_themePreference == "dark" ? "bento-dark" : null)">
 
 <head>
     <meta charset="utf-8" />
@@ -13,10 +13,17 @@
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet @rendermode="InteractiveServer" />
+    <script>
+        // 沒有選過主題（沒有 cookie）時跟隨系統設定；在畫面顯示前就套用，避免閃爍
+        if (!document.cookie.includes('bento-theme=') &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('bento-dark');
+        }
+    </script>
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="InteractiveServer" ThemePreference="@_themePreference" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
 
@@ -212,7 +219,32 @@
                 });
             }
         };
+
+        // 主題（MainLayout 的切換按鈕使用）：記在 cookie 讓伺服器下次直接輸出對應配色，
+        // 並切換 <html> 的 bento-dark class（app.css 的 CSS 變數依此切換）
+        window.bentoTheme = {
+            set: (isDark) => {
+                document.cookie = 'bento-theme=' + (isDark ? 'dark' : 'light') +
+                    '; path=/; max-age=31536000; samesite=lax';
+                document.documentElement.classList.toggle('bento-dark', isDark);
+            }
+        };
     </script>
 </body>
 
 </html>
+
+@code {
+    // 靜態渲染時可取得 HttpContext，用來讀取主題 cookie
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    // "dark"、"light"，或 null（沒有選過，跟隨系統）
+    private string? _themePreference;
+
+    protected override void OnInitialized()
+    {
+        var value = HttpContext?.Request.Cookies["bento-theme"];
+        _themePreference = value is "dark" or "light" ? value : null;
+    }
+}

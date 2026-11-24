@@ -21,7 +21,7 @@
 }
 
 .cell-locked {
-    background-color: #DBD5CF;
+    background-color: var(--bento-locked-bg);
     border-style: dashed;
     opacity: 0.8;
 }
@@ -47,8 +47,8 @@
 
 .today-tag {
     font-size: 0.65rem;
-    background-color: #FFE0B2; /* 淺橘色 */
-    color: #E65100; /* 深橘色文字 */
+    background-color: var(--bento-today-bg);
+    color: var(--bento-today-text);
     padding: 1px 8px;
     border-radius: 4px;
     font-weight: 800;
@@ -85,7 +85,7 @@
 }
 
 .rest-mode {
-    color: #BDBDBD;
+    color: var(--mud-palette-text-disabled);
 }
 
 /* 一般使用者看得到鎖頭，但不能點 */

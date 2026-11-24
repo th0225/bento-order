@@ -43,8 +43,6 @@ builder.Services.AddSingleton<MenuService>();
 // 匯入政府辦公日曆（國定假日、補班日）
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<HolidayImportService>();
-// Telegram 系統通知（備份失敗）
-builder.Services.AddScoped<TelegramNotifier>();
 // 資料備份（每天 03:00，保留 30 天）
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddHostedService<BackupBackgroundService>();

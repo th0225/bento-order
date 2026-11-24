@@ -10,8 +10,8 @@
 @implements IDisposable
 @inject IDialogService DialogService
 
-<MudThemeProvider @bind-IsDarkMode="@GlobalState.IsDarkMode"
-    Theme="@CustomTheme"/>
+<MudThemeProvider @ref="_themeProvider"
+    @bind-IsDarkMode="@GlobalState.IsDarkMode" Theme="@CustomTheme"/>
 <MudPopoverProvider />
 <MudSnackbarProvider />
 <MudDialogProvider />
@@ -71,6 +71,12 @@
                         @GlobalState.CurrentUser.Realname
                     </MudText>
 
+                    <MudTooltip Text="@ThemeToggleText">
+                        <MudIconButton Icon="@ThemeToggleIcon"
+                            Color="Color.Inherit" Class="mr-2 appbar-text"
+                            OnClick="ToggleThemeAsync" />
+                    </MudTooltip>
+
                     <MudButton Variant="Variant.Outlined"
                         Color="Color.Inherit"
                         OnClick="ShowMenu" Class="mr-4 appbar-text"
@@ -99,6 +105,10 @@
                         Size="Size.Small" Style="font-size: 0.75rem;">
                         @AvatarText
                     </MudAvatar>
+
+                    <MudIconButton Icon="@ThemeToggleIcon"
+                        Color="Color.Inherit" OnClick="ToggleThemeAsync"
+                        Class="d-md-none" />
 
                     <MudIconButton
                         Icon="@Icons.Material.Filled.RestaurantMenu"
@@ -201,6 +211,30 @@
             Surface = "#FFFFFF",
             LinesDefault = "#E0D7C6",
         },
+        // 暗色：深咖啡底、橘色重點，與亮色同一套風格
+        PaletteDark = new PaletteDark()
+        {
+            AppbarBackground = "#221E1A",
+            AppbarText = "#F3E5D8",
+            Background = "#1C1916",
+            BackgroundGray = "#26211D",
+
+            Primary = "#FFA726",
+            Secondary = "#BCAAA4",
+
+            DrawerBackground = "#221E1A",
+            DrawerText = "#E8DCD0",
+            DrawerIcon = "#FFA726",
+
+            Surface = "#2A2420",
+            TextPrimary = "#EDE3D9",
+            TextSecondary = "#B5A79A",
+            ActionDefault = "#C8B8AA",
+            LinesDefault = "#4A3F37",
+            LinesInputs = "#6B5D52",
+            Divider = "#4A3F37",
+            TableLines = "#4A3F37",
+        },
         LayoutProperties = new LayoutProperties()
         {
             DefaultBorderRadius = "12px",
@@ -217,12 +251,57 @@
         }
     };
 
+    // 主題偏好（App.razor 從 cookie 讀出）："dark"、"light"，null = 跟隨系統
+    [CascadingParameter(Name = "ThemePreference")]
+    private string? ThemePreference { get; set; }
+
+    private MudThemeProvider? _themeProvider;
+
+    private string ThemeToggleIcon => GlobalState.IsDarkMode
+        ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode;
+    private string ThemeToggleText => GlobalState.IsDarkMode ? "切換為亮色" : "切換為暗色";
+
     // 初始化
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
+        // 有選過主題時，第一次渲染就用對的配色（不會先閃一下亮色）
+        if (ThemePreference != null)
+        {
+            GlobalState.IsDarkMode = ThemePreference == "dark";
+        }
+
         GlobalState.OnChange += OnGlobalStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // 沒選過主題：跟隨系統設定
+        if (firstRender && ThemePreference == null && _themeProvider != null)
+        {
+            try
+            {
+                var systemDark = await _themeProvider.GetSystemDarkModeAsync();
+                if (systemDark != GlobalState.IsDarkMode)
+                {
+                    GlobalState.SetDarkMode(systemDark);
+                }
+            }
+            catch (JSException) { }
+        }
+    }
+
+    // 切換亮色/暗色，並記在 cookie
+    private async Task ToggleThemeAsync()
+    {
+        var isDark = !GlobalState.IsDarkMode;
+        GlobalState.SetDarkMode(isDark);
+        try
+        {
+            await JS.InvokeVoidAsync("bentoTheme.set", isDark);
+        }
+        catch (JSException) { }
     }
 
     // GlobalState 可能在其他元件的非同步流程中變更，透過 InvokeAsync 回到渲染執行緒

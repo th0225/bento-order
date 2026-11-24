@@ -10,7 +10,7 @@
 @* 每月菜單管理：選月份、上傳（瀏覽器端壓縮）、刪除 *@
 <div class="menu-manager">
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-2">
-    <MudPaper Class="pa-4 mb-4" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-4" Style="background-color: var(--bento-panel-bg);">
         <div class="month-nav">
             <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
                 OnClick="@(() => SelectMonth(_month.AddMonths(-1)))" />
@@ -37,7 +37,7 @@
         }
     </MudPaper>
 
-    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+    <MudPaper Class="pa-4 mb-6" Style="background-color: var(--bento-panel-bg);">
         @if (_previewUrl != null)
         {
             @* 新選的圖片預覽 *@

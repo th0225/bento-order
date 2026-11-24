@@ -1,4 +1,6 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+@* ThemePreference 由 App.razor 從 cookie 讀出，傳給 MainLayout 決定初始主題 *@
+<CascadingValue Name="ThemePreference" Value="ThemePreference">
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
             <NotAuthorized>
@@ -8,3 +10,10 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+</CascadingValue>
+
+@code {
+    // "dark"、"light"，或 null（跟隨系統）
+    [Parameter]
+    public string? ThemePreference { get; set; }
+}

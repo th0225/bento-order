@@ -8,7 +8,7 @@
   - `app.db`：資料庫完整副本（以 SQLite `VACUUM INTO` 產生，網站運作中備份也一致）
   - `menus/`：每月菜單圖片
 - 管理員可在「資料備份」頁（`/admin/backups`）立即備份、查看與下載備份檔。
-- 備份失敗時會發 Telegram 通知（需在「系統設定」填入 Telegram Bot Token 與 Chat ID）。
+- 備份失敗時會寫入伺服器 log，並在「資料備份」頁顯示失敗訊息；請不定期進去確認最近一次備份是否成功。
 
 ## 還原
 

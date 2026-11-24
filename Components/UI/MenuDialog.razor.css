@@ -19,7 +19,7 @@
     height: 70vh;
     overflow: auto;
     border-radius: 12px;
-    background-color: #F3EEE7;
+    background-color: var(--bento-zoom-bg);
     cursor: grab;
     /* 單指交給瀏覽器捲動，雙指捏合由程式處理 */
     touch-action: pan-x pan-y;

@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<SystemConfig> SystemConfig => Set<SystemConfig>();
     public DbSet<LockedDate> LockedDates => Set<LockedDate>();
+    public DbSet<MealType> MealTypes => Set<MealType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,11 @@ public class AppDbContext : DbContext
             .IsUnique();
         modelBuilder.Entity<LockedDate>()
             .HasIndex(d => d.Date)
+            .IsUnique();
+
+        // 餐點種類名稱不可重複
+        modelBuilder.Entity<MealType>()
+            .HasIndex(m => m.Name)
             .IsUnique();
 
         modelBuilder.Entity<Order>(entity =>

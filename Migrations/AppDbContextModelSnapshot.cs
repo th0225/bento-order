@@ -37,6 +37,27 @@ namespace bento_order.Migrations
                     b.ToTable("LockedDates");
                 });
 
+            modelBuilder.Entity("bento_order.Models.MealType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("MealTypes");
+                });
+
             modelBuilder.Entity("bento_order.Models.Order", b =>
                 {
                     b.Property<int>("Id")

@@ -1,7 +1,6 @@
 @using bento_order.Services
 
 @inject BentoDbService BentoDbService
-@inject IMealProvider MealProvider
 @inject ISnackbar Snackbar
 @inject GlobalState GlobalState
 
@@ -36,7 +35,7 @@
                         Value="@_bentoName"
                         ValueChanged="@((string val) =>
                             OnMealChanged(val, isAdditional: false))">
-                        @foreach (var type in MealProvider.GetMealTypes())
+                        @foreach (var type in OptionsFor(_bentoName))
                         {
                             <MudSelectItem Value="@type" />
                         }
@@ -53,7 +52,7 @@
                         Value="@_addBentoName"
                         ValueChanged="@((string val) =>
                             OnMealChanged(val, isAdditional: true))">
-                        @foreach (var type in MealProvider.GetMealTypes())
+                        @foreach (var type in OptionsFor(_addBentoName))
                         {
                             <MudSelectItem Value="@type" />
                         }
@@ -88,6 +87,16 @@
     // 該日期在 LockedDates 的紀錄，沒有則為 null
     [Parameter]
     public LockedDate? LockedDate { get; set; }
+
+    // 可選的餐點種類名稱（由頁面從資料庫讀取一次後傳入）
+    [Parameter]
+    public IReadOnlyList<string> MealTypes { get; set; } = [];
+
+    // 下拉選項：餐點種類，加上目前已選但已被刪除的餐點（讓舊訂單仍能顯示）
+    private IEnumerable<string> OptionsFor(string current) =>
+        string.IsNullOrEmpty(current) || MealTypes.Contains(current)
+            ? MealTypes
+            : MealTypes.Append(current);
 
     private CancellationTokenSource? _cts;
     private bool IsToday => Date.Date == AppTime.Today;

@@ -209,6 +209,8 @@ public class BentoDbService
                 throw new InvalidOperationException("使用者不存在。");
             }
 
+            await ValidateMealNamesAsync(db, order);
+
             if (!isAdmin)
             {
                 var lockRecord = await db.LockedDates
@@ -370,6 +372,191 @@ public class BentoDbService
                 HasOrdered = order?.HasMeal ?? false
             };
         }).ToList();
+    }
+
+
+    // 餐點名稱必須是空白、現有的餐點種類，或這筆訂單原本的值
+    // （原本的餐點種類被刪除後，未修改的欄位仍可保留）
+    private static async Task ValidateMealNamesAsync(AppDbContext db,
+        Order order)
+    {
+        var names = new[]
+        {
+            order.BentoItem?.Name ?? string.Empty,
+            order.AdditionalBentoItem?.Name ?? string.Empty
+        }.Where(n => n.Length > 0).Distinct().ToList();
+
+        if (names.Count == 0)
+        {
+            return;
+        }
+
+        var validNames = await db.MealTypes
+            .Where(m => names.Contains(m.Name))
+            .Select(m => m.Name)
+            .ToListAsync();
+
+        var existing = await db.Orders.AsNoTracking().FirstOrDefaultAsync(o =>
+            o.UserId == order.UserId && o.OrderDate == order.OrderDate);
+        if (existing != null)
+        {
+            validNames.Add(existing.BentoItem?.Name ?? string.Empty);
+            validNames.Add(existing.AdditionalBentoItem?.Name ?? string.Empty);
+        }
+
+        var invalid = names.FirstOrDefault(n => !validNames.Contains(n));
+        if (invalid != null)
+        {
+            throw new InvalidOperationException($"餐點「{invalid}」不存在。");
+        }
+    }
+
+
+    // --- 餐點種類相關 ---
+    public const int MaxMealTypeNameLength = 20;
+
+    // 依顯示順序取得所有餐點種類
+    public async Task<List<MealType>> GetMealTypesAsync()
+    {
+        using var db = _dbFactory.CreateDbContext();
+        return await db.MealTypes
+            .OrderBy(m => m.SortOrder)
+            .ThenBy(m => m.Id)
+            .ToListAsync();
+    }
+
+    // 新增餐點種類（排在最後），成功回傳 null，失敗回傳錯誤訊息
+    public async Task<string?> AddMealTypeAsync(string name)
+    {
+        name = name?.Trim() ?? string.Empty;
+        var error = ValidateMealTypeName(name);
+        if (error != null)
+        {
+            return error;
+        }
+
+        using var db = _dbFactory.CreateDbContext();
+        if (await db.MealTypes.AnyAsync(m => m.Name == name))
+        {
+            return $"「{name}」已存在";
+        }
+
+        var maxSort = await db.MealTypes
+            .MaxAsync(m => (int?)m.SortOrder) ?? 0;
+        db.MealTypes.Add(new MealType { Name = name, SortOrder = maxSort + 1 });
+        await db.SaveChangesAsync();
+        return null;
+    }
+
+    // 修改餐點名稱，並一併更新所有訂單（含歷史）中的名稱，讓統計維持一致
+    public async Task<string?> RenameMealTypeAsync(int id, string newName)
+    {
+        newName = newName?.Trim() ?? string.Empty;
+        var error = ValidateMealTypeName(newName);
+        if (error != null)
+        {
+            return error;
+        }
+
+        using var db = _dbFactory.CreateDbContext();
+        var mealType = await db.MealTypes.FindAsync(id);
+        if (mealType == null)
+        {
+            return "找不到這個餐點種類";
+        }
+
+        var oldName = mealType.Name;
+        if (oldName == newName)
+        {
+            return null;
+        }
+
+        if (await db.MealTypes.AnyAsync(m => m.Name == newName))
+        {
+            return $"「{newName}」已存在";
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
+        mealType.Name = newName;
+        await db.SaveChangesAsync();
+
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE \"Orders\" SET \"BentoName\" = {newName} WHERE \"BentoName\" = {oldName}");
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE \"Orders\" SET \"AddBentoName\" = {newName} WHERE \"AddBentoName\" = {oldName}");
+
+        await transaction.CommitAsync();
+        return null;
+    }
+
+    // 刪除餐點種類。今天以後還有人訂這個餐點時不可刪除；
+    // 過去的訂單保留原本的名稱
+    public async Task<string?> DeleteMealTypeAsync(int id)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        var mealType = await db.MealTypes.FindAsync(id);
+        if (mealType == null)
+        {
+            return "找不到這個餐點種類";
+        }
+
+        var name = mealType.Name;
+        var today = AppTime.Today;
+        var futureCount = await db.Orders.CountAsync(o =>
+            o.OrderDate >= today &&
+            (o.BentoItem!.Name == name || o.AdditionalBentoItem!.Name == name));
+
+        if (futureCount > 0)
+        {
+            return $"今天以後還有 {futureCount} 筆訂單選了「{name}」，請先請使用者改選其他餐點";
+        }
+
+        db.MealTypes.Remove(mealType);
+        await db.SaveChangesAsync();
+        return null;
+    }
+
+    // 調整順序：direction = -1 往前、+1 往後
+    public async Task MoveMealTypeAsync(int id, int direction)
+    {
+        using var db = _dbFactory.CreateDbContext();
+        var list = await db.MealTypes
+            .OrderBy(m => m.SortOrder)
+            .ThenBy(m => m.Id)
+            .ToListAsync();
+
+        var index = list.FindIndex(m => m.Id == id);
+        var target = index + Math.Sign(direction);
+        if (index < 0 || target < 0 || target >= list.Count)
+        {
+            return;
+        }
+
+        (list[index], list[target]) = (list[target], list[index]);
+
+        // 重新編號，順便修正舊資料中重複或跳號的 SortOrder
+        for (var i = 0; i < list.Count; i++)
+        {
+            list[i].SortOrder = i + 1;
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private static string? ValidateMealTypeName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "請輸入餐點名稱";
+        }
+
+        if (name.Length > MaxMealTypeNameLength)
+        {
+            return $"餐點名稱最多 {MaxMealTypeNameLength} 個字";
+        }
+
+        return null;
     }
 
 

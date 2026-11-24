@@ -1,0 +1,57 @@
+@* 通用的單行文字輸入對話框，確定時回傳輸入的文字 *@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight: bold;">@Title</MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudTextField @bind-Value="Value" Label="@Label" Immediate
+            Variant="Variant.Outlined" Margin="Margin.Dense"
+            MaxLength="@MaxLength" Counter="@MaxLength"
+            OnKeyDown="OnKeyDown" />
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+            OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(Value)">
+            確定
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    // 初始值，也是使用者輸入的值
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public int MaxLength { get; set; } = 50;
+
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(Value))
+        {
+            MudDialog.Close(DialogResult.Ok(Value.Trim()));
+        }
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            Submit();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

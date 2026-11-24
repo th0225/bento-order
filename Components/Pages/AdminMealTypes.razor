@@ -1,0 +1,208 @@
+@page "/admin/meal-types"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using bento_order.Services
+
+@inject BentoDbService BentoDbService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+@* 管理餐點種類：新增、改名（會一併更新既有訂單）、刪除、調整順序 *@
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-2">
+    <MudPaper Class="pa-4 mb-6" Style="background-color: #f8f9fa;">
+        <div class="d-flex align-center gap-2">
+            <MudTextField @bind-Value="_newName" Label="新增餐點種類"
+                Variant="Variant.Outlined" Margin="Margin.Dense" Immediate
+                MaxLength="@BentoDbService.MaxMealTypeNameLength"
+                OnKeyDown="OnNewNameKeyDown" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                Color="Color.Primary" Variant="Variant.Filled"
+                Disabled="@(string.IsNullOrWhiteSpace(_newName) || _isBusy)"
+                OnClick="AddAsync" />
+        </div>
+        <MudText Typo="Typo.caption" Class="mt-2 d-block">
+            改名會一併更新所有訂單中的名稱；今天以後還有人訂的餐點不能刪除。
+        </MudText>
+    </MudPaper>
+
+    <MudTable Items="_mealTypes" Hover Dense Elevation="1"
+        Style="background-color: #f8f9fa;" Loading="@(_mealTypes == null)">
+        <HeaderContent>
+            <MudTh>餐點名稱</MudTh>
+            <MudTh Style="text-align: right">操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="餐點名稱">@context.Name</MudTd>
+            <MudTd DataLabel="操作" Style="text-align: right">
+                <MudTooltip Text="上移">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
+                        Size="Size.Small" Disabled="@(IsFirst(context) || _isBusy)"
+                        OnClick="@(() => MoveAsync(context, -1))" />
+                </MudTooltip>
+                <MudTooltip Text="下移">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
+                        Size="Size.Small" Disabled="@(IsLast(context) || _isBusy)"
+                        OnClick="@(() => MoveAsync(context, 1))" />
+                </MudTooltip>
+                <MudTooltip Text="修改名稱">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                        Color="Color.Primary" Disabled="@_isBusy"
+                        OnClick="@(() => RenameAsync(context))" />
+                </MudTooltip>
+                <MudTooltip Text="刪除">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                        Color="Color.Error" Disabled="@_isBusy"
+                        OnClick="@(() => DeleteAsync(context))" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>尚未設定任何餐點種類，使用者將無法點餐。</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<MealType>? _mealTypes;
+    private string _newName = string.Empty;
+    private bool _isBusy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _mealTypes = await BentoDbService.GetMealTypesAsync();
+        }
+        catch (Exception ex)
+        {
+            _mealTypes ??= [];
+            Snackbar.Add($"讀取失敗：{ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool IsFirst(MealType m) => _mealTypes?.FirstOrDefault() == m;
+    private bool IsLast(MealType m) => _mealTypes?.LastOrDefault() == m;
+
+    // 執行一個操作：期間停用按鈕、攔截例外、完成後重新讀取
+    private async Task RunAsync(Func<Task<string?>> action, string successMessage)
+    {
+        _isBusy = true;
+        try
+        {
+            var error = await action();
+            if (error != null)
+            {
+                Snackbar.Add(error, Severity.Warning);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(successMessage))
+            {
+                Snackbar.Add(successMessage, Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"操作失敗：{ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isBusy = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task AddAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newName) || _isBusy)
+        {
+            return;
+        }
+
+        var name = _newName.Trim();
+        await RunAsync(async () =>
+        {
+            var error = await BentoDbService.AddMealTypeAsync(name);
+            if (error == null)
+            {
+                _newName = string.Empty;
+            }
+            return error;
+        }, $"已新增「{name}」");
+    }
+
+    private async Task OnNewNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddAsync();
+        }
+    }
+
+    private async Task RenameAsync(MealType mealType)
+    {
+        var parameters = new DialogParameters<TextInputDialog>
+        {
+            { x => x.Title, "修改餐點名稱" },
+            { x => x.Label, "餐點名稱" },
+            { x => x.Value, mealType.Name },
+            { x => x.MaxLength, BentoDbService.MaxMealTypeNameLength }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<TextInputDialog>(
+            "", parameters, options);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: string newName } ||
+            newName == mealType.Name)
+        {
+            return;
+        }
+
+        await RunAsync(
+            () => BentoDbService.RenameMealTypeAsync(mealType.Id, newName),
+            $"已將「{mealType.Name}」改為「{newName}」，既有訂單已一併更新");
+    }
+
+    private async Task DeleteAsync(MealType mealType)
+    {
+        var parameters = new DialogParameters<CustomDialog>
+        {
+            { x => x.Title, "刪除餐點種類" },
+            { x => x.Content, $"確定要刪除「{mealType.Name}」嗎？過去的訂單會保留原本的名稱。" }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+
+        var dialog = await DialogService.ShowAsync<CustomDialog>(
+            "", parameters, options);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        await RunAsync(
+            () => BentoDbService.DeleteMealTypeAsync(mealType.Id),
+            $"已刪除「{mealType.Name}」");
+    }
+
+    private Task MoveAsync(MealType mealType, int direction) =>
+        RunAsync(async () =>
+        {
+            await BentoDbService.MoveMealTypeAsync(mealType.Id, direction);
+            return null;
+        }, string.Empty);
+}

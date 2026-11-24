@@ -11,6 +11,6 @@
 
 ## 刻意保留
 
-- **餐點名稱以字串存入資料庫**（`"A餐"` 等）：改成 ID 會牽涉所有歷史資料，維持「`MealProvider` 只能新增、不能改名」的規則即可。
+- **餐點名稱以字串存入訂單**（`"A餐"` 等）：改成 ID 會牽涉所有歷史資料。目前由 `BentoDbService` 在改名時一併更新訂單、刪除時檢查今天以後的訂單來維持一致。
 - **`BentoItem.Option`、`MealProvider.GetMealOptions`**：README 規劃中的飯量功能會用到。
 - **`GlobalState.IsDarkMode` / `SetDarkMode`**：README 規劃中的暗色模式會用到，目前還沒有暗色 palette。

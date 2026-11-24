@@ -13,7 +13,8 @@
             <CalendarCell Date="date"
                 TargetUserId="@GlobalState.CurrentUser!.Id"
                 Order="@_orders.FirstOrDefault(o => o.OrderDate == date)"
-                LockedDate="@_lockedDates.FirstOrDefault(d => d.Date == date)" />
+                LockedDate="@_lockedDates.FirstOrDefault(d => d.Date == date)"
+                MealTypes="_mealTypes" />
         </CellTemplate>
     </MonthCalendar>
 
@@ -27,9 +28,20 @@
     private DateTime _month = AppTime.Today;
     private List<Order> _orders = [];
     private List<LockedDate> _lockedDates = [];
+    private List<string> _mealTypes = [];
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            _mealTypes = (await BentoDbService.GetMealTypesAsync())
+                .Select(m => m.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"讀取餐點種類失敗：{ex.Message}", Severity.Error);
+        }
+
         await LoadMonthDataAsync();
     }
 

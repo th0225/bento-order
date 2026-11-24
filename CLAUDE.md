@@ -62,6 +62,7 @@ dotnet ef migrations add <PascalCase名稱>
 6. `Users.MustChangePassword = true` 時，`MainLayout` 會以 `ChangePasswordForm` 取代 `@Body`，改完密碼前看不到任何頁面。目前只有預設的 admin 帳號會被設為 true；一般使用者不強制改密碼（使用者明確要求），但可用右上角「改密碼」自行修改，管理員也可在使用者管理頁重設。改密碼與重設密碼都在 `BentoDbService`，密碼至少 `MinPasswordLength` 個字元。
 
 - 角色定義在 `Models/AppConstants.cs` 的 `Roles`。管理員登入後導向 `/admin/users`，一般使用者導向 `/home`。
+- 管理員選單項目定義在 `Components/Layout/AdminNavItems.cs`，電腦版左側選單（`NavMenu`）與手機版（小於 960px）AppBar 的下拉選單共用。新增管理頁時加在這裡。
 - `/auth/login` 有限流：同一個 IP 每 5 分鐘最多 10 次，超過回傳 429。
 - `/auth/*` 不套用 `/not-found` 狀態碼頁面，API 會回傳原本的狀態碼（401、429）。
 
@@ -81,7 +82,15 @@ dotnet ef migrations add <PascalCase名稱>
 - `LockedDates`：管理員對單一日期的鎖定設定，`Date` 唯一，規則見下一節。
 - `SystemConfig`：key/value 設定，`Key` 唯一，可用的 key 定義在 `Models/AppConstants.cs` 的 `ConfigKeys`（LINE Token、兩個群組 ID、每日統計標題）。
 
-餐點選項定義在 `Models/MealProvider.cs`（"A餐"、"B餐"、"素食"、"合菜"），以顯示字串直接存入 `Orders`。
+- `MealTypes`：餐點種類（`Name` 唯一、`SortOrder` 排序），管理員在 `/admin/meal-types` 新增、改名、刪除、排序。
+
+餐點種類以**名稱字串**直接存入 `Orders`，因此 `BentoDbService` 會處理一致性：
+
+- 改名（`RenameMealTypeAsync`）：在同一個 transaction 中一併更新所有訂單（含歷史）的名稱。
+- 刪除（`DeleteMealTypeAsync`）：今天以後還有訂單用到時拒絕；只有過去訂單用到時可刪，歷史保留原名稱。
+- 儲存訂單（`UpsertOrderAsync`）：餐點名稱必須是空白、現有的種類，或這筆訂單原本的值。
+- 頁面讀一次 `GetMealTypesAsync()`，再用 `MealTypes` 參數傳給 `CalendarCell`；已被刪除但訂單仍在用的名稱，會額外加進下拉選項以便顯示。
+- `Models/MealProvider.cs` 只剩飯量選項（`GetMealOptions`），為 README 規劃中的飯量功能保留。
 
 ### 訂餐鎖定規則（核心商業邏輯）
 
@@ -141,7 +150,7 @@ dotnet ef migrations add <PascalCase名稱>
 4. 資料庫操作放在 service 中，並使用非同步的 EF API。
    - 日期一律存成午夜（`.Date`）；「現在」用 `AppTime`。
    - 查詢某一天時用區間 `o.OrderDate >= day && o.OrderDate < day.AddDays(1)`，不要用 `.Date` 或 Year/Month/Day 比較，否則用不到 `(UserId, OrderDate)` 索引。
-5. 不要修改或刪除 `MealProvider` 中現有的餐點名稱，只能新增。歷史訂單和統計都是用這些字串比對的。
+5. 不要直接用 SQL 或 EF 修改 `MealTypes` 的名稱或刪除資料，一律透過 `BentoDbService` 的餐點種類方法，才能維持訂單中的名稱一致。
 6. 角色與 `SystemConfig` 的 key 一律用 `Models/AppConstants.cs` 的 `Roles` / `ConfigKeys`，不要再寫字串。新增的常數也放在那裡。
 7. 樣式規則：
    - 顏色優先使用 `MainLayout.razor` 中 `CustomTheme` 的 palette（或 `var(--mud-palette-*)`），不要再新增寫死的色碼。

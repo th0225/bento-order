@@ -1,3 +1,7 @@
+@using bento_order.Services
+@inject BentoDbService BentoDbService
+@inject ISnackbar Snackbar
+
 @* 管理員修改某位使用者某一天的訂單（不受鎖定限制） *@
 <MudDialog>
     <TitleContent>
@@ -8,7 +12,7 @@
 
     <DialogContent>
         <CalendarCell Date="Date" TargetUserId="UserId" Order="Order"
-            IsEditMode="true" />
+            IsEditMode="true" MealTypes="_mealTypes" />
     </DialogContent>
 
     <DialogActions>
@@ -34,6 +38,21 @@
     // 該日已有的訂單，沒有則為 null
     [Parameter]
     public Order? Order { get; set; }
+
+    private List<string> _mealTypes = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _mealTypes = (await BentoDbService.GetMealTypesAsync())
+                .Select(m => m.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"讀取餐點種類失敗：{ex.Message}", Severity.Error);
+        }
+    }
 
     void Submit() => MudDialog.Close(DialogResult.Ok(true));
 }

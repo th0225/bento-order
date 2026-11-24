@@ -36,9 +36,28 @@
 
                 @if (GlobalState.IsAdmin)
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                        Color="Color.Inherit" Edge="Edge.Start"
-                        OnClick="@((e) => DrawerToggle())" />
+                    @* 電腦版：切換左側選單 *@
+                    <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                            Color="Color.Inherit" Edge="Edge.Start"
+                            OnClick="@((e) => DrawerToggle())" />
+                    </MudHidden>
+
+                    @* 手機版：從上方懸浮的下拉選單 *@
+                    <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                        <MudMenu Icon="@Icons.Material.Filled.Menu"
+                            Color="Color.Inherit"
+                            AnchorOrigin="Origin.BottomLeft"
+                            TransformOrigin="Origin.TopLeft"
+                            ListClass="mobile-nav-menu">
+                            @foreach (var item in AdminNavItems.All)
+                            {
+                                <MudMenuItem Href="@item.Href"
+                                    Icon="@item.Icon" IconColor="Color.Primary"
+                                    Label="@item.Title" />
+                            }
+                        </MudMenu>
+                    </MudHidden>
                 }
 
                 <MudText Typo="Typo.h6" Class="ml-3 appbar-text">
@@ -101,11 +120,14 @@
 
             @if (GlobalState.IsAdmin)
             {
-                <MudDrawer Variant="DrawerVariant.Persistent"
-                    Elevation="0" ClipMode="DrawerClipMode.Always"
-                    @bind-Open="_drawerOpen" Width="180px">
-                    <NavMenu />
-                </MudDrawer>
+                @* 左側選單只在電腦版顯示；手機版改用 AppBar 的下拉選單 *@
+                <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                    <MudDrawer Variant="DrawerVariant.Persistent"
+                        Elevation="0" ClipMode="DrawerClipMode.Always"
+                        @bind-Open="_drawerOpen" Width="180px">
+                        <NavMenu />
+                    </MudDrawer>
+                </MudHidden>
             }
         }
         <MudMainContent>

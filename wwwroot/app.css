@@ -173,3 +173,12 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 152, 0, 0.1) !important;
 }
+/* 手機版管理員下拉選單（MainLayout 的 MudMenu） */
+.mobile-nav-menu {
+    min-width: 200px;
+}
+
+.mobile-nav-menu .mud-menu-item {
+    font-weight: 700;
+    color: var(--mud-palette-appbar-text);
+}

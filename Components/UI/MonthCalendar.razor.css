@@ -15,6 +15,11 @@
     gap: 12px;
 }
 
+/* 星期列（含下方間距）的總高度；寬螢幕時左側月份卡片以此對齊第一週 */
+.month-calendar {
+    --weekday-row-height: 36px;
+}
+
 .weekday-header {
     text-align: center;
     font-weight: 800;
@@ -23,15 +28,86 @@
     padding-bottom: 8px;
 }
 
+/* 標題卡片：預設（手機、平板）橫向排列在月曆上方 */
+.month-side ::deep .month-header {
+    margin-bottom: 24px;
+}
+
+.month-header-inner {
+    display: flex;
+    align-items: center;
+}
+
+.header-spacer {
+    flex: 1 1 auto;
+}
+
 .header-actions {
     display: flex;
     align-items: center;
     margin-right: 8px;
 }
 
+.nav-controls {
+    display: flex;
+    align-items: center;
+}
+
+/* 寬螢幕：標題卡片放在月曆左側的留白處（不佔月曆寬度，月曆大小與原本相同），
+   捲動時固定在畫面上。頁面容器最寬 1280px，左右留白要放得下 220px 卡片 + 間距
+   才套用；較窄的螢幕維持在月曆上方。 */
+@media (min-width: 1760px) {
+    .month-calendar {
+        position: relative;
+    }
+
+    .month-side {
+        position: absolute;
+        top: var(--weekday-row-height);  /* 與第一週格子同高（跳過星期列） */
+        bottom: 0;              /* 與月曆同高，讓裡面的卡片可以 sticky */
+        right: calc(100% + 24px);
+        width: 220px;
+    }
+
+    .month-side ::deep .month-header {
+        position: sticky;
+        top: 80px;              /* AppBar 64px 下方 */
+        margin-bottom: 0;
+    }
+
+    .month-header-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .header-spacer {
+        display: none;
+    }
+
+    .header-actions {
+        margin-right: 0;
+    }
+
+    .header-actions ::deep .mud-button-root {
+        width: 100%;
+    }
+
+    .nav-controls {
+        justify-content: space-between;
+    }
+}
+
 /* 捲到某一天時，避開上方固定的 AppBar（64px） */
 .calendar-day {
     scroll-margin-top: 76px;
+    /* 讓格子撐滿整列高度：同一列有兩份餐點的格子時，其他格子一起變高 */
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day ::deep .cell-wrapper {
+    flex: 1 1 auto;
 }
 
 /* 手機版：改成條列式 */

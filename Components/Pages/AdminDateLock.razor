@@ -81,7 +81,7 @@
 
     <MonthCalendar Month="_month" MonthChanged="OnMonthChanged">
         <CellTemplate Context="date">
-            <CalendarCell Date="date" ShowMeals="false"
+            <CalendarCell Date="date" ShowMeals="false" ShowLockToggle="true"
                 LockedDate="@_lockedDates.FirstOrDefault(d => d.Date == date)" />
         </CellTemplate>
     </MonthCalendar>

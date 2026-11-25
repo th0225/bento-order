@@ -4,9 +4,11 @@
 
 @* 月曆版面（標題、切換月份、星期列、日期格），格子內容由 CellTemplate 決定 *@
 
+@* 電腦版：標題卡片在左側（固定不隨捲動），月曆在右側；手機版：標題卡片在上方 *@
 <div class="month-calendar">
-<MudPaper Elevation="0" Class="pa-6 rounded-xl shadow-cream mb-6">
-    <div class="d-flex align-center">
+<aside class="month-side">
+<MudPaper Elevation="0" Class="pa-6 rounded-xl shadow-cream month-header">
+    <div class="month-header-inner">
         <div class="month-display">
             <MudText Typo="Typo.h4" Style="font-weight: 800">
                 @Month.ToString("yyyy")
@@ -16,9 +18,9 @@
             </MudText>
         </div>
 
-        <MudSpacer />
+        <div class="header-spacer"></div>
 
-        @* 頁面自訂的操作按鈕（例如批次訂餐），放在切換月份按鈕左邊 *@
+        @* 頁面自訂的操作按鈕（例如批次訂餐） *@
         @if (HeaderActions != null)
         {
             <div class="header-actions">@HeaderActions</div>
@@ -38,7 +40,9 @@
         </div>
     </div>
 </MudPaper>
+</aside>
 
+<div class="month-main">
 <div class="calendar-grid mb-2">
     @foreach (var day in WeekDays)
     {
@@ -59,6 +63,7 @@
             @CellTemplate(date)
         </div>
     }
+</div>
 </div>
 </div>
 

@@ -54,6 +54,13 @@
     font-weight: 800;
 }
 
+/* 星期（只在手機版顯示） */
+.day-week {
+    display: none;
+    font-size: 0.8rem;
+    color: var(--mud-palette-text-secondary);
+}
+
 .day-note {
     flex: 1 1 auto;
     min-width: 0;          /* 讓長名稱可以被截斷 */
@@ -86,6 +93,33 @@
     gap: 4px;
 }
 
+/* 餐點2標籤列：右側有取消按鈕 */
+.second-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cancel-second {
+    border: none;
+    background: none;
+    padding: 0 2px;
+    line-height: 1;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.cancel-second:hover {
+    color: var(--mud-palette-error);
+}
+
+/* 餐點1選單中的「新增第二份餐點」 */
+.add-second {
+    color: var(--mud-palette-primary);
+    font-weight: bold;
+}
+
 .select-group ::deep .flex-grow-2 {
     flex: 2;
 }
@@ -106,7 +140,28 @@
 
 /* 手機版：選單撐滿整個格子寬度 */
 @media (max-width: 960px) {
-    .cell-body {
+    /* 手機版（條列式）：日期在左、餐點在右，排成一行，格子變矮 */
+    .cell-wrapper {
+        min-height: 0;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 12px;
+    }
+
+    .cell-header {
+        flex: 0 0 34%;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 6px;
+    }
+
+    .day-week {
+        display: inline;
+    }
+
+    .cell-body,
+    .rest-mode {
         flex: 1 1 auto;
         width: 100%;
         display: flex;
@@ -132,5 +187,20 @@
     .select-group ::deep .mud-input.mud-input-underline:after {
         width: 100%;
         left: 0;
+    }
+}
+
+/* 電腦版：格子高度依內容決定（不固定最小高度），餐點1、餐點2 上下排列 */
+@media (min-width: 961px) {
+    .cell-wrapper {
+        min-height: 0;
+    }
+
+    .meal-section {
+        min-width: 0;          /* 讓長餐點名稱截斷，不撐寬格子 */
+    }
+
+    .select-group ::deep .mud-input-control {
+        min-width: 0;
     }
 }

@@ -95,6 +95,10 @@
                 case "throttled":
                     _errorMessage = "嘗試次數過多，請 5 分鐘後再試";
                     break;
+                case "locked":
+                    _errorMessage =
+                        $"密碼錯誤次數過多，帳號已暫時鎖定 {bento_order.Services.BentoDbService.LockoutMinutes} 分鐘";
+                    break;
                 default:
                     _errorMessage = "帳號密碼有誤";
                     break;

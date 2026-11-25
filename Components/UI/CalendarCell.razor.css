@@ -55,9 +55,15 @@
 }
 
 .day-note {
+    flex: 1 1 auto;
+    min-width: 0;          /* 讓長名稱可以被截斷 */
+    margin: 0 6px;
     font-size: 0.7rem;
     font-weight: bold;
     color: var(--mud-palette-error);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* 開放的日子（例如補班日） */

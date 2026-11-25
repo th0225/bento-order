@@ -30,7 +30,8 @@
     <script>
         // 登入/登出只負責呼叫 API；身分一律由伺服器端的 cookie 決定
         window.bentoAuth = {
-            // 回傳 'ok'、'invalid'（帳密錯誤）或 'throttled'（嘗試太多次）
+            // 回傳 'ok'、'invalid'（帳密錯誤）、'throttled'（同 IP 嘗試太多次）
+            // 或 'locked'（帳號連續失敗太多次，暫時鎖定）
             login: async (username, password) => {
                 const response = await fetch('/auth/login', {
                     method: 'POST',
@@ -41,6 +42,7 @@
 
                 if (response.ok) return 'ok';
                 if (response.status === 429) return 'throttled';
+                if (response.status === 423) return 'locked';
                 return 'invalid';
             },
 

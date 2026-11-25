@@ -3,6 +3,7 @@
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/", replace: true);
+        // 重新載入整頁：登入已失效（例如改密碼）時，讓伺服器清掉舊的 cookie
+        Navigation.NavigateTo("/", forceLoad: true, replace: true);
     }
 }

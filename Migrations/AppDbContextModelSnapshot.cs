@@ -110,6 +110,12 @@ namespace bento_order.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LockoutEnd")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("MustChangePassword")
                         .HasColumnType("INTEGER");
 
@@ -122,6 +128,10 @@ namespace bento_order.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SecurityStamp")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -140,10 +150,12 @@ namespace bento_order.Migrations
                         new
                         {
                             Id = 1,
+                            FailedLoginCount = 0,
                             MustChangePassword = true,
                             PasswordHash = "admin",
                             RealName = "",
                             Role = "Admin",
+                            SecurityStamp = "",
                             Username = "admin"
                         });
                 });

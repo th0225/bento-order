@@ -7,6 +7,11 @@
 <div class="cell-wrapper @(_isFinalLocked ? "cell-locked" : "")">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
+        @* 國定假日名稱、補班等備註：放在同一行，太長以…截斷，格子高度不變 *@
+        <span class="day-note @(_lockRecord?.IsLocked == false ? "day-note-open" : "")"
+            title="@_lockRecord?.Note">
+            @_lockRecord?.Note
+        </span>
         <div class="lock-overlay">
             <MudToggleIconButton
                 Toggled="_isFinalLocked"
@@ -22,14 +27,6 @@
             <div class="today-tag">TODAY</div>
         }
     </div>
-
-    @* 國定假日名稱、補班等備註 *@
-    @if (!string.IsNullOrEmpty(_lockRecord?.Note))
-    {
-        <div class="day-note @(_lockRecord.IsLocked ? "" : "day-note-open")">
-            @_lockRecord.Note
-        </div>
-    }
 
     @if (ShowMeals)
     {

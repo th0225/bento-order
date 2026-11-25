@@ -16,18 +16,57 @@ public class BentoDbService
     }
 
     // --- 使用者相關 ---
-    // 使用者登錄
-    public async Task<User?> LoginAsync(string username, string password)
+    // 帳號鎖定：連續失敗 MaxFailedLogins 次後鎖定 LockoutMinutes 分鐘
+    public const int MaxFailedLogins = 5;
+    public const int LockoutMinutes = 15;
+    public const int MinPasswordLength = 8;
+
+    public enum LoginStatus { Success, Invalid, LockedOut }
+
+    public record LoginResult(LoginStatus Status, User? User = null);
+
+    // 帳號不存在時也做一次雜湊比對，讓回應時間一致，無法藉此猜出帳號是否存在
+    private static readonly string DummyPasswordHash =
+        new PasswordHasher<User>().HashPassword(new User(), "dummy-password");
+
+    // 使用者登入
+    public async Task<LoginResult> LoginAsync(string username, string password)
     {
         using var db = _dbFactory.CreateDbContext();
         var user = await db.Users.FirstOrDefaultAsync(
             u => u.Username == username
         );
 
-        if (user == null || !VerifyPassword(user, password))
+        if (user == null)
         {
-            return null;
+            _passwordHasher.VerifyHashedPassword(new User(), DummyPasswordHash,
+                password);
+            return new LoginResult(LoginStatus.Invalid);
         }
+
+        var now = AppTime.Now;
+        if (user.LockoutEnd > now)
+        {
+            return new LoginResult(LoginStatus.LockedOut);
+        }
+
+        if (!VerifyPassword(user, password))
+        {
+            user.FailedLoginCount++;
+            var lockedOut = user.FailedLoginCount >= MaxFailedLogins;
+            if (lockedOut)
+            {
+                user.LockoutEnd = now.AddMinutes(LockoutMinutes);
+                user.FailedLoginCount = 0;
+            }
+
+            await db.SaveChangesAsync();
+            return new LoginResult(
+                lockedOut ? LoginStatus.LockedOut : LoginStatus.Invalid);
+        }
+
+        user.FailedLoginCount = 0;
+        user.LockoutEnd = null;
 
         // 舊的明碼密碼或需要重新雜湊時，順便更新成新的雜湊
         if (user.PasswordHash == password ||
@@ -36,10 +75,10 @@ public class BentoDbService
                 PasswordVerificationResult.SuccessRehashNeeded)
         {
             user.PasswordHash = _passwordHasher.HashPassword(user, password);
-            await db.SaveChangesAsync();
         }
 
-        return user;
+        await db.SaveChangesAsync();
+        return new LoginResult(LoginStatus.Success, user);
     }
 
     // 驗證密碼（相容早期以明碼儲存的密碼）
@@ -60,6 +99,8 @@ public class BentoDbService
         return user.PasswordHash == password;
     }
 
+    private static string NewSecurityStamp() => Guid.NewGuid().ToString("N");
+
     // 取得單一使用者
     public async Task<User?> GetUserAsync(int userId)
     {
@@ -67,14 +108,18 @@ public class BentoDbService
         return await db.Users.FindAsync(userId);
     }
 
-    // 使用者是否仍存在（被刪除的使用者 cookie 需失效）
-    public async Task<bool> UserExistsAsync(int userId)
+    // 取得使用者目前的安全戳記；使用者不存在時回傳 null（登入 cookie 應失效）
+    public async Task<string?> GetSecurityStampAsync(int userId)
     {
         using var db = _dbFactory.CreateDbContext();
-        return await db.Users.AnyAsync(u => u.Id == userId);
+        return await db.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.SecurityStamp)
+            .FirstOrDefaultAsync();
     }
 
-    // 修改自己的密碼，成功回傳 null，失敗回傳錯誤訊息
+    // 修改自己的密碼，成功回傳 null，失敗回傳錯誤訊息。
+    // 會更新安全戳記：其他裝置的登入失效，目前裝置需用新密碼重新登入
     public async Task<string?> ChangePasswordAsync(int userId,
         string currentPassword, string newPassword)
     {
@@ -104,12 +149,14 @@ public class BentoDbService
 
         user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
         user.MustChangePassword = false;
+        user.SecurityStamp = NewSecurityStamp();
         await db.SaveChangesAsync();
 
         return null;
     }
 
-    // 管理員重設使用者密碼（不強制使用者修改）
+    // 管理員重設使用者密碼（不強制使用者修改）：
+    // 該使用者所有裝置的登入失效，並解除帳號鎖定
     public async Task<string?> ResetPasswordAsync(int userId,
         string newPassword)
     {
@@ -128,12 +175,13 @@ public class BentoDbService
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        user.SecurityStamp = NewSecurityStamp();
+        user.FailedLoginCount = 0;
+        user.LockoutEnd = null;
         await db.SaveChangesAsync();
 
         return null;
     }
-
-    public const int MinPasswordLength = 6;
 
     private static string? ValidateNewPassword(string password)
     {
@@ -153,25 +201,38 @@ public class BentoDbService
         return await db.Users.ToListAsync();
     }
 
-    // 新增使用者
-    public async Task<bool> AddUserAsync(User user)
+    // 新增使用者（user.PasswordHash 傳入的是明碼密碼），成功回傳 null，失敗回傳錯誤訊息
+    public async Task<string?> AddUserAsync(User user)
     {
+        user.Username = user.Username?.Trim() ?? string.Empty;
+        if (user.Username.Length == 0)
+        {
+            return "請輸入帳號";
+        }
+
+        var error = ValidateNewPassword(user.PasswordHash);
+        if (error != null)
+        {
+            return error;
+        }
+
         using var db = _dbFactory.CreateDbContext();
         // 檢查帳號是否重覆
         if (await db.Users.AnyAsync(u => u.Username == user.Username))
         {
-            return false;
+            return "帳號已存在";
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(
             user,
             user.PasswordHash
         );
+        user.SecurityStamp = NewSecurityStamp();
 
         db.Users.Add(user);
         await db.SaveChangesAsync();
-        
-        return true;
+
+        return null;
     }
 
     // 刪除使用者

@@ -95,18 +95,10 @@
     // 新增使用者
     private async Task CreateUser()
     {
-        // 需輸入帳號密碼
-        if (string.IsNullOrWhiteSpace(_newUser.Username) ||
-            string.IsNullOrEmpty(_newUser.PasswordHash))
-        {
-            return;
-        }
-
-        // 新增至資料庫
-        bool success;
+        string? error;
         try
         {
-            success = await BentoDbService.AddUserAsync(_newUser);
+            error = await BentoDbService.AddUserAsync(_newUser);
         }
         catch (Exception ex)
         {
@@ -114,19 +106,16 @@
             return;
         }
 
-        if (success)
+        if (error != null)
         {
-            // 重置表格
-            _newUser = new() { Role = Roles.User };
-            // 讀取使用者資料
-            await LoadUsers();
+            Snackbar.Add(error, Severity.Error);
+            return;
+        }
 
-            Snackbar.Add("使用者新增成功", Severity.Success);
-        }
-        else
-        {
-            Snackbar.Add("帳號已存在! ", Severity.Error);
-        }
+        // 重置表格並重新讀取
+        _newUser = new() { Role = Roles.User };
+        await LoadUsers();
+        Snackbar.Add("使用者新增成功", Severity.Success);
     }
 
     // 重設密碼

@@ -58,12 +58,15 @@ dotnet ef migrations add <PascalCase名稱>
 2. 伺服器用 ASP.NET Identity 的 `PasswordHasher` 驗證密碼（舊的明碼密碼會在登入時自動轉成雜湊），然後發出 cookie `BentoOrderAuth`，有效 7 天。
 3. 登入成功後以 `forceLoad: true` 重新載入 `/`，建立新的 circuit。`MainLayout.OnInitializedAsync` 從 `AuthenticationState` 的 claims 建立 `GlobalState.CurrentUser`（這是唯一的身分來源），`Login.razor` 再依角色導向。
 4. 頁面用 `[Authorize]` 或 `[Authorize(Roles = Roles.Admin)]` 保護。`Routes.razor` 的 `AuthorizeRouteView` 在未授權時導回 `/`。
-5. 每次 HTTP 請求時，cookie 的 `OnValidatePrincipal`（`Program.cs`）會確認使用者仍存在，被刪除的使用者會立即登出。
-6. `Users.MustChangePassword = true` 時，`MainLayout` 會以 `ChangePasswordForm` 取代 `@Body`，改完密碼前看不到任何頁面。目前只有預設的 admin 帳號會被設為 true；一般使用者不強制改密碼（使用者明確要求），但可用右上角「改密碼」自行修改，管理員也可在使用者管理頁重設。改密碼與重設密碼都在 `BentoDbService`，密碼至少 `MinPasswordLength` 個字元。
+5. 登入 cookie 帶有使用者的 `SecurityStamp`。每次 HTTP 請求時，`OnValidatePrincipal`（`Program.cs`）確認使用者仍存在且戳記相同；已開著的分頁由 `Services/RevalidatingAuthStateProvider.cs` 每 5 分鐘檢查一次。改密碼、重設密碼會更新戳記，讓所有裝置的登入失效；自己改密碼後 `ChangePasswordForm` 會用新密碼自動重新登入。
+6. `Users.MustChangePassword = true` 時，`MainLayout` 會以 `ChangePasswordForm` 取代 `@Body`，改完密碼前看不到任何頁面。目前只有預設的 admin 帳號會被設為 true；一般使用者不強制改密碼（使用者明確要求），但可用右上角「改密碼」自行修改，管理員也可在使用者管理頁重設。改密碼與重設密碼都在 `BentoDbService`，密碼至少 `MinPasswordLength`（8）個字元。
 
 - 角色定義在 `Models/AppConstants.cs` 的 `Roles`。管理員登入後導向 `/admin/users`，一般使用者導向 `/home`。
 - 管理員選單項目定義在 `Components/Layout/AdminNavItems.cs`，電腦版左側選單（`NavMenu`）與手機版（小於 960px）AppBar 的下拉選單共用。新增管理頁時加在這裡。
-- `/auth/login` 有限流：同一個 IP 每 5 分鐘最多 10 次，超過回傳 429。
+- `/auth/login` 的防護：
+  - 同一個 IP 每 5 分鐘最多 10 次，超過回傳 429。
+  - 同一個帳號連續失敗 `MaxFailedLogins`（5）次，鎖定 `LockoutMinutes`（15）分鐘，回傳 423；管理員重設密碼會解除鎖定。
+  - 帳號不存在時也做一次雜湊比對，回應時間與帳號存在時一致，無法藉此猜出帳號。
 - `/auth/*` 不套用 `/not-found` 狀態碼頁面，API 會回傳原本的狀態碼（401、429）。
 
 ### 資料存取

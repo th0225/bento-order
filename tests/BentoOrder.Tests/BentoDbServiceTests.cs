@@ -35,7 +35,7 @@ public class BentoDbServiceTests : IDisposable
             PasswordHash = "secret123",
             RealName = username
         };
-        Assert.True(await _service.AddUserAsync(user));
+        Assert.Null(await _service.AddUserAsync(user));
         return user;
     }
 
@@ -158,7 +158,7 @@ public class BentoDbServiceTests : IDisposable
     [Fact]
     public async Task 預設管理員_必須改密碼_改完後解除()
     {
-        var admin = await _service.LoginAsync("admin", "admin");
+        var admin = (await _service.LoginAsync("admin", "admin")).User;
         Assert.NotNull(admin);
         Assert.True(admin.MustChangePassword);
 
@@ -167,8 +167,8 @@ public class BentoDbServiceTests : IDisposable
         Assert.Null(
             await _service.ChangePasswordAsync(admin.Id, "admin", "newpass1"));
 
-        Assert.Null(await _service.LoginAsync("admin", "admin"));
-        var relogin = await _service.LoginAsync("admin", "newpass1");
+        Assert.Null((await _service.LoginAsync("admin", "admin")).User);
+        var relogin = (await _service.LoginAsync("admin", "newpass1")).User;
         Assert.NotNull(relogin);
         Assert.False(relogin.MustChangePassword);
     }
@@ -180,7 +180,7 @@ public class BentoDbServiceTests : IDisposable
         Assert.False((await _service.GetUserAsync(user.Id))!.MustChangePassword);
 
         Assert.Null(await _service.ResetPasswordAsync(user.Id, "reset123"));
-        var login = await _service.LoginAsync("u1", "reset123");
+        var login = (await _service.LoginAsync("u1", "reset123")).User;
         Assert.NotNull(login);
         Assert.False(login.MustChangePassword);
     }

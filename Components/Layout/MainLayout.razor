@@ -66,38 +66,33 @@
 
                 <MudSpacer />
 
-                @* 電腦版 *@
+                @* 電腦版：主題、菜單為圖示（滑過顯示說明）；改密碼、登出收在姓名下拉選單 *@
                 <div class="d-none d-md-flex align-center">
-                    <MudText Typo="Typo.body2" Class="mr-3 appbar-text">
-                        @GlobalState.CurrentUser.Realname
-                    </MudText>
-
                     <MudTooltip Text="@ThemeToggleText">
                         <MudIconButton Icon="@ThemeToggleIcon"
                             Color="Color.Inherit" Class="mr-2 appbar-text"
                             OnClick="ToggleThemeAsync" />
                     </MudTooltip>
 
-                    <MudButton Variant="Variant.Outlined"
-                        Color="Color.Inherit"
-                        OnClick="ShowMenu" Class="mr-4 appbar-text"
-                        StartIcon="@Icons.Material.Filled.RestaurantMenu">
-                        菜單
-                    </MudButton>
+                    <MudTooltip Text="菜單">
+                        <MudIconButton
+                            Icon="@Icons.Material.Filled.RestaurantMenu"
+                            Color="Color.Inherit" Class="mr-2 appbar-text"
+                            OnClick="ShowMenu" />
+                    </MudTooltip>
 
-                    <MudButton Variant="Variant.Outlined"
-                        Color="Color.Inherit"
-                        OnClick="ShowChangePassword" Class="mr-4 appbar-text"
-                        StartIcon="@Icons.Material.Filled.Key">
-                        改密碼
-                    </MudButton>
-
-                    <MudButton Variant="Variant.Outlined"
-                        Color="Color.Inherit"
-                        OnClick="HandleLogout" Class="appbar-text"
-                        StartIcon="@Icons.Material.Filled.Logout">
-                        登出
-                    </MudButton>
+                    <MudMenu Label="@DisplayName" Variant="Variant.Text"
+                        Color="Color.Inherit" Class="appbar-text"
+                        StartIcon="@Icons.Material.Filled.AccountCircle"
+                        EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                        AnchorOrigin="Origin.BottomRight"
+                        TransformOrigin="Origin.TopRight"
+                        AriaLabel="帳號選單">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Key"
+                            Label="改密碼" OnClick="ShowChangePassword" />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout"
+                            Label="登出" OnClick="HandleLogout" />
+                    </MudMenu>
                 </div>
 
                 @* 手機版：只有圖示，加上 tooltip 說明（長按或滑過顯示） *@
@@ -257,6 +252,12 @@
 
     private string ThemeToggleIcon => GlobalState.IsDarkMode
         ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode;
+    // AppBar 顯示的名稱：姓名，沒有姓名則用帳號
+    private string DisplayName =>
+        string.IsNullOrWhiteSpace(GlobalState.CurrentUser?.Realname)
+            ? GlobalState.CurrentUser?.Username ?? string.Empty
+            : GlobalState.CurrentUser.Realname;
+
     private string ThemeToggleText => GlobalState.IsDarkMode ? "切換為亮色" : "切換為暗色";
 
     // 初始化

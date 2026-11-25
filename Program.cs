@@ -30,6 +30,10 @@ builder.Services.AddRazorComponents()
         options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
     });
 builder.Services.AddCascadingAuthenticationState();
+// 定期重新檢查已開著分頁的登入狀態（使用者被刪除、改密碼後失效）
+builder.Services.AddScoped<
+    Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider,
+    RevalidatingAuthStateProvider>();
 // MudBlazor Service
 builder.Services.AddMudServices();
 // 全域狀態（每個 circuit 一份）
@@ -64,16 +68,14 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.Name = "BentoOrderAuth";
     options.LoginPath = "/Login";
 
-    // 使用者被刪除後，原本的登入 cookie 立即失效
+    // 使用者被刪除、或改密碼/重設密碼後（安全戳記不同），原本的登入 cookie 立即失效
     options.Events.OnValidatePrincipal = async context =>
     {
-        var userId = context.Principal?.FindFirstValue(
-            ClaimTypes.NameIdentifier);
         var dbService = context.HttpContext.RequestServices
             .GetRequiredService<BentoDbService>();
 
-        if (!int.TryParse(userId, out var id) ||
-            !await dbService.UserExistsAsync(id))
+        if (!await RevalidatingAuthStateProvider.IsValidAsync(
+            context.Principal, dbService))
         {
             context.RejectPrincipal();
             await context.HttpContext.SignOutAsync(
@@ -162,12 +164,18 @@ app.MapPost("/auth/login", async (
     BentoDbService bentoDbService,
     HttpContext httpContext) =>
 {
-    var user = await bentoDbService.LoginAsync(
+    var result = await bentoDbService.LoginAsync(
         request.Username,
         request.Password
     );
 
-    if (user == null)
+    if (result.Status == BentoDbService.LoginStatus.LockedOut)
+    {
+        // 帳號連續登入失敗太多次，暫時鎖定
+        return Results.StatusCode(StatusCodes.Status423Locked);
+    }
+
+    if (result.User is not { } user)
     {
         return Results.Unauthorized();
     }
@@ -177,7 +185,8 @@ app.MapPost("/auth/login", async (
         new(ClaimTypes.NameIdentifier, user.Id.ToString()),
         new(ClaimTypes.Name, user.Username),
         new(ClaimTypes.Role, user.Role),
-        new("RealName", user.RealName)
+        new("RealName", user.RealName),
+        new(RevalidatingAuthStateProvider.SecurityStampClaim, user.SecurityStamp)
     };
 
     var identity = new ClaimsIdentity(

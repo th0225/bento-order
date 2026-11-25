@@ -45,7 +45,7 @@
                     @* 手機版：從上方懸浮的下拉選單 *@
                     <MudHidden Breakpoint="Breakpoint.MdAndUp">
                         <MudMenu Icon="@Icons.Material.Filled.Menu"
-                            Color="Color.Inherit"
+                            Color="Color.Inherit" AriaLabel="管理選單"
                             AnchorOrigin="Origin.BottomLeft"
                             TransformOrigin="Origin.TopLeft"
                             ListClass="mobile-nav-menu">
@@ -59,7 +59,8 @@
                     </MudHidden>
                 }
 
-                <MudText Typo="Typo.h6" Class="ml-3 appbar-text">
+                @* 標題只在電腦版顯示，手機版空間留給按鈕 *@
+                <MudText Typo="Typo.h6" Class="ml-3 appbar-text d-none d-md-flex">
                     bento order
                 </MudText>
 
@@ -99,31 +100,28 @@
                     </MudButton>
                 </div>
 
-                @* 手機版 *@
+                @* 手機版：只有圖示，加上 tooltip 說明（長按或滑過顯示） *@
                 <div class="d-flex d-md-none align-center">
-                    <MudAvatar Color="Color.Secondary" Class="pa-4 mr-4"
-                        Size="Size.Small" Style="font-size: 0.75rem;">
-                        @AvatarText
-                    </MudAvatar>
+                    <MudTooltip Text="@ThemeToggleText">
+                        <MudIconButton Icon="@ThemeToggleIcon"
+                            Color="Color.Inherit" OnClick="ToggleThemeAsync" />
+                    </MudTooltip>
 
-                    <MudIconButton Icon="@ThemeToggleIcon"
-                        Color="Color.Inherit" OnClick="ToggleThemeAsync"
-                        Class="d-md-none" />
+                    <MudTooltip Text="菜單">
+                        <MudIconButton
+                            Icon="@Icons.Material.Filled.RestaurantMenu"
+                            Color="Color.Inherit" OnClick="ShowMenu" />
+                    </MudTooltip>
 
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.RestaurantMenu"
-                        Color="Color.Inherit" OnClick="ShowMenu"
-                        Class="d-md-none" />
+                    <MudTooltip Text="改密碼">
+                        <MudIconButton Icon="@Icons.Material.Filled.Key"
+                            Color="Color.Inherit" OnClick="ShowChangePassword" />
+                    </MudTooltip>
 
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.Key"
-                        Color="Color.Inherit" OnClick="ShowChangePassword"
-                        Class="d-md-none" />
-
-                    <MudIconButton
-                        Icon="@Icons.Material.Filled.Logout"
-                        Color="Color.Inherit" OnClick="HandleLogout"
-                        Class="d-md-none" />
+                    <MudTooltip Text="登出">
+                        <MudIconButton Icon="@Icons.Material.Filled.Logout"
+                            Color="Color.Inherit" OnClick="HandleLogout" />
+                    </MudTooltip>
                 </div>
             </MudAppBar>
 
@@ -306,20 +304,6 @@
 
     // GlobalState 可能在其他元件的非同步流程中變更，透過 InvokeAsync 回到渲染執行緒
     private void OnGlobalStateChanged() => _ = InvokeAsync(StateHasChanged);
-
-    // 手機版頭像：姓名第一個字，沒有姓名則用帳號
-    private string AvatarText
-    {
-        get
-        {
-            var name = GlobalState.CurrentUser?.Realname;
-            if (string.IsNullOrEmpty(name))
-            {
-                name = GlobalState.CurrentUser?.Username;
-            }
-            return string.IsNullOrEmpty(name) ? "U" : name[..1];
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {

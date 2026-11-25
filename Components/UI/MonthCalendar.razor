@@ -16,6 +16,11 @@
             <MudText Typo="Typo.h5" Style="margin-top: -8px;">
                 @Month.ToString("MMMM", ZhTw)
             </MudText>
+            @* 頁面自訂的狀態文字（例如本月未訂天數） *@
+            @if (HeaderInfo != null)
+            {
+                <div class="header-info">@HeaderInfo</div>
+            }
         </div>
 
         <div class="header-spacer"></div>
@@ -81,6 +86,10 @@
     // 切換月份時通知父元件（傳入該月 1 日）
     [Parameter]
     public EventCallback<DateTime> MonthChanged { get; set; }
+
+    // 標題卡片中年月下方的狀態文字（可選）
+    [Parameter]
+    public RenderFragment? HeaderInfo { get; set; }
 
     // 標題卡片內的額外操作按鈕（可選）
     [Parameter]

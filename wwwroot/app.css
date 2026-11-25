@@ -10,7 +10,8 @@
     --bento-appbar-border: #D7CCC8;
     --bento-hover-bg: #FFF9F2;          /* 格子、表格列滑過 */
     --bento-nav-hover-bg: #FFF3E0;      /* 側邊選單滑過 */
-    --bento-locked-bg: #DBD5CF;         /* 已鎖定的日期格子 */
+    --bento-locked-bg: #D5CCC2;         /* 未來已鎖定的日期格子 */
+    --bento-locked-border: #AE9F90;
     --bento-today-bg: #FFE0B2;
     --bento-today-text: #E65100;
     --bento-dialog-bg: #FFFDF7;         /* 菜單對話框 */
@@ -23,7 +24,8 @@
     --bento-appbar-border: #4A3F37;
     --bento-hover-bg: #352C26;
     --bento-nav-hover-bg: #3A3029;
-    --bento-locked-bg: #3A332E;
+    --bento-locked-bg: #3D3530;
+    --bento-locked-border: #75665A;
     --bento-today-bg: #5D4037;
     --bento-today-text: #FFCC80;
     --bento-dialog-bg: #2A2420;

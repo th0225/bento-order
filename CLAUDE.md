@@ -115,6 +115,9 @@ dotnet ef migrations add <PascalCase名稱>
   - 選擇餐點後，經過 500ms debounce 自動呼叫 `UpsertOrderAsync` 儲存，沒有「儲存」按鈕。選餐當下會再檢查一次鎖定，儲存失敗則還原成上一次成功儲存的值並顯示 Snackbar。
   - 訂單寫給 `TargetUserId` 參數指定的人；一般使用者一律寫給自己（元件內強制）。
   - 不會修改傳入的 `Order` 物件，畫面上的值存在元件自己的欄位。
+  - 格子狀態：過去（`cell-past`，最淡）、鎖定（`cell-locked`，`title` 顯示 `OrderLockPolicy.GetLockReason` 的原因，今天截止與管理員鎖定另有簡短標示）、可訂但未訂（`cell-unordered`，橘色邊框）。
+  - 儲存成功時格子顯示「✓ 已儲存」（不跳 Snackbar，失敗才跳），並呼叫 `OnOrderSaved`；`/home` 用它即時更新月份卡片的「本月還有 N 天未訂」。
+  - 頁面重新渲染時，傳入的訂單與最後儲存的相同就不重設畫面上的值，避免蓋掉使用者正在編輯的內容。
 - 批次訂餐：`/home` 的「批次訂餐」按鈕開啟 `BatchOrderDialog`，呼叫 `BentoDbService.BatchUpsertOrdersAsync`，把餐點套用到目前月份中指定星期幾的日子。一律依 `OrderLockPolicy` 略過已截止或鎖定的日子（管理員也一樣），預設不覆蓋已訂的日子。
 - 用在三個地方：
   - `/home`：使用者自己的月曆。

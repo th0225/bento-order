@@ -61,4 +61,25 @@ public class OrderLockPolicyTests
         var locked = new LockedDate { Date = Wednesday.AddDays(1), IsLocked = true };
         Assert.True(OrderLockPolicy.IsLocked(Wednesday.AddDays(1), now, locked));
     }
+
+    [Fact]
+    public void 鎖定原因()
+    {
+        var morning = Wednesday.AddHours(8);
+        var holiday = Wednesday.AddDays(1);
+
+        Assert.Null(OrderLockPolicy.GetLockReason(Wednesday, morning, null));
+        Assert.Equal("已過日期", OrderLockPolicy.GetLockReason(
+            Wednesday.AddDays(-1), morning, null));
+        Assert.Equal("已超過 09:00 截止時間", OrderLockPolicy.GetLockReason(
+            Wednesday, Wednesday.AddHours(9), null));
+        Assert.Equal("週末不供餐", OrderLockPolicy.GetLockReason(
+            Saturday, morning, null));
+        Assert.Equal("行憲紀念日", OrderLockPolicy.GetLockReason(holiday, morning,
+            new LockedDate { Date = holiday, IsLocked = true, Note = "行憲紀念日" }));
+        Assert.Equal("管理員已鎖定", OrderLockPolicy.GetLockReason(holiday, morning,
+            new LockedDate { Date = holiday, IsLocked = true }));
+        Assert.Null(OrderLockPolicy.GetLockReason(Saturday, morning,
+            new LockedDate { Date = Saturday, IsLocked = false, Note = "補班" }));
+    }
 }

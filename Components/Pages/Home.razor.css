@@ -1,0 +1,9 @@
+/* Home 專屬樣式（CSS isolation） */
+
+.unordered-info {
+    color: var(--mud-palette-primary);
+}
+
+.all-ordered-info {
+    color: var(--mud-palette-success);
+}

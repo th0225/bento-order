@@ -11,6 +11,16 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 pb-8">
     <MonthCalendar Month="_month" MonthChanged="OnMonthChanged"
         ScrollToTodayOnMobile="true">
+        <HeaderInfo>
+            @if (UnorderedCount > 0)
+            {
+                <span class="unordered-info">本月還有 @UnorderedCount 天未訂</span>
+            }
+            else if (HasOrderableDays)
+            {
+                <span class="all-ordered-info">本月可訂的日子都已訂好</span>
+            }
+        </HeaderInfo>
         <HeaderActions>
             @* 電腦版：文字按鈕；手機版：只有圖示，避免標題列太擠 *@
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
@@ -36,7 +46,8 @@
                 TargetUserId="@GlobalState.CurrentUser!.Id"
                 Order="@_orders.FirstOrDefault(o => o.OrderDate == date)"
                 LockedDate="@_lockedDates.FirstOrDefault(d => d.Date == date)"
-                MealTypes="_mealTypes" />
+                MealTypes="_mealTypes"
+                OnOrderSaved="OnOrderSaved" />
         </CellTemplate>
     </MonthCalendar>
 
@@ -97,6 +108,33 @@
         {
             await LoadMonthDataAsync();
         }
+    }
+
+    // 本月「還可以訂、但還沒訂」的天數（鎖定規則與格子相同）
+    private int UnorderedCount => OrderableDays().Count(date =>
+        !_orders.Any(o => o.OrderDate == date && o.HasMeal));
+
+    private bool HasOrderableDays => OrderableDays().Any();
+
+    private IEnumerable<DateTime> OrderableDays()
+    {
+        var now = AppTime.Now;
+        var start = new DateTime(_month.Year, _month.Month, 1);
+        for (var date = start; date.Month == start.Month; date = date.AddDays(1))
+        {
+            var lockRecord = _lockedDates.FirstOrDefault(d => d.Date == date);
+            if (!OrderLockPolicy.IsLocked(date, now, lockRecord))
+            {
+                yield return date;
+            }
+        }
+    }
+
+    // 格子儲存成功：更新本頁的訂單清單，讓未訂天數即時更新
+    private void OnOrderSaved(Order order)
+    {
+        _orders.RemoveAll(o => o.OrderDate == order.OrderDate);
+        _orders.Add(order);
     }
 
     // 取得整月份資料

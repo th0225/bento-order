@@ -12,26 +12,37 @@ public static class OrderLockPolicy
     // lockRecord：該日期在 LockedDates 的紀錄，沒有則為 null
     //   IsLocked = true  → 管理員強制鎖定（例如國定假日）
     //   IsLocked = false → 管理員開放週末（補班日）；不會解除「過去日期」與「截止時間」
-    public static bool IsLocked(DateTime date, DateTime now, LockedDate? lockRecord)
+    public static bool IsLocked(DateTime date, DateTime now, LockedDate? lockRecord) =>
+        GetLockReason(date, now, lockRecord) != null;
+
+    // 鎖定的原因（顯示給使用者）；沒有鎖定時回傳 null
+    public static string? GetLockReason(DateTime date, DateTime now,
+        LockedDate? lockRecord)
     {
         var day = date.Date;
 
         if (day < now.Date)
         {
-            return true;
+            return "已過日期";
         }
 
         if (day == now.Date && now.Hour >= CutoffHour)
         {
-            return true;
+            return $"已超過 {CutoffHour:00}:00 截止時間";
         }
 
         if (lockRecord != null)
         {
-            return lockRecord.IsLocked;
+            if (!lockRecord.IsLocked)
+            {
+                return null;
+            }
+
+            return string.IsNullOrEmpty(lockRecord.Note)
+                ? "管理員已鎖定" : lockRecord.Note;
         }
 
-        return day.DayOfWeek == DayOfWeek.Saturday ||
-            day.DayOfWeek == DayOfWeek.Sunday;
+        return day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+            ? "週末不供餐" : null;
     }
 }

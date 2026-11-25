@@ -4,16 +4,21 @@
 @inject ISnackbar Snackbar
 @inject GlobalState GlobalState
 
-<div class="cell-wrapper @(_isFinalLocked ? "cell-locked" : "")">
+<div class="cell-wrapper @CellStateClass" title="@_lockReason">
     <div class="cell-header">
         <span class="day-num">@Date.Day</span>
         @* 星期：只在手機版顯示（電腦版有星期列） *@
         <span class="day-week">@WeekdayText</span>
         @* 國定假日名稱、補班等備註：放在同一行，太長以…截斷，格子高度不變 *@
+        @* 沒有備註時，顯示簡短的鎖定原因（手機沒有滑鼠提示，靠這個知道原因） *@
         <span class="day-note @(_lockRecord?.IsLocked == false ? "day-note-open" : "")"
-            title="@_lockRecord?.Note">
-            @_lockRecord?.Note
+            title="@(string.IsNullOrEmpty(_lockRecord?.Note) ? _lockReason : _lockRecord.Note)">
+            @(string.IsNullOrEmpty(_lockRecord?.Note) ? ShortLockLabel : _lockRecord.Note)
         </span>
+        @if (_showSaved)
+        {
+            <span class="saved-check">✓ 已儲存</span>
+        }
         @* 鎖定開關只在日期鎖定頁顯示（ShowLockToggle）；其他頁面以格子樣式表示鎖定 *@
         @if (ShowLockToggle)
         {
@@ -123,6 +128,10 @@
     [Parameter]
     public LockedDate? LockedDate { get; set; }
 
+    // 儲存成功後通知頁面（例如更新「本月未訂天數」）
+    [Parameter]
+    public EventCallback<Order> OnOrderSaved { get; set; }
+
     // 可選的餐點種類名稱（由頁面從資料庫讀取一次後傳入）
     [Parameter]
     public IReadOnlyList<string> MealTypes { get; set; } = [];
@@ -148,14 +157,93 @@
 
     protected override void OnParametersSet()
     {
-        _bentoName = _savedBentoName = Order?.BentoItem?.Name ?? string.Empty;
-        _addBentoName = _savedAddBentoName =
-            Order?.AdditionalBentoItem?.Name ?? string.Empty;
+        var incomingName = Order?.BentoItem?.Name ?? string.Empty;
+        var incomingAddName = Order?.AdditionalBentoItem?.Name ?? string.Empty;
 
-        _showSecond = !string.IsNullOrEmpty(_addBentoName);
+        // 第一次，或傳入的訂單與最後儲存的不同（例如批次訂餐後重新讀取）才重設畫面上的值；
+        // 自己剛儲存後頁面重新渲染時，不要蓋掉使用者正在編輯的內容（例如剛展開的餐點2）
+        if (!_initialized || incomingName != _savedBentoName ||
+            incomingAddName != _savedAddBentoName)
+        {
+            _bentoName = _savedBentoName = incomingName;
+            _addBentoName = _savedAddBentoName = incomingAddName;
+            _showSecond = !string.IsNullOrEmpty(_addBentoName);
+            _initialized = true;
+        }
 
         _lockRecord = LockedDate;
-        _isFinalLocked = !IsEditMode && IsLockedNow();
+        RefreshLock();
+    }
+
+    private bool _initialized;
+    // 鎖定原因（null = 可修改）；編輯模式（管理員修改他人訂單）不鎖定
+    private string? _lockReason;
+
+    private void RefreshLock()
+    {
+        _lockReason = IsEditMode ? null
+            : OrderLockPolicy.GetLockReason(Date, AppTime.Now, _lockRecord);
+        _isFinalLocked = _lockReason != null;
+    }
+
+    // 格子狀態的 CSS class：過去、鎖定、可訂但還沒訂
+    private string CellStateClass
+    {
+        get
+        {
+            if (Date.Date < AppTime.Today && !IsEditMode)
+            {
+                return "cell-locked cell-past";
+            }
+
+            if (_isFinalLocked)
+            {
+                return "cell-locked";
+            }
+
+            return ShowMeals && !IsEditMode && string.IsNullOrEmpty(_bentoName) &&
+                string.IsNullOrEmpty(_addBentoName) ? "cell-unordered" : "";
+        }
+    }
+
+    // 格子上的簡短鎖定標示（沒有假日名稱時）；週末與過去的日子從樣式就看得出來，不顯示
+    private string? ShortLockLabel
+    {
+        get
+        {
+            if (_lockReason == null || Date.Date < AppTime.Today)
+            {
+                return null;
+            }
+
+            if (Date.Date == AppTime.Today)
+            {
+                return "已截止";
+            }
+
+            return _lockRecord?.IsLocked == true ? "已鎖定" : null;
+        }
+    }
+
+    // 儲存成功後短暫顯示「✓ 已儲存」
+    private bool _showSaved;
+    private CancellationTokenSource? _savedFlashCts;
+
+    private async Task FlashSavedAsync()
+    {
+        _savedFlashCts?.Cancel();
+        _savedFlashCts = new();
+        var token = _savedFlashCts.Token;
+
+        _showSaved = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await Task.Delay(1500, token);
+            _showSaved = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException) { }
     }
 
     // 餐點1選單中「新增第二份餐點」項目的值（不是真的餐點，不會儲存）
@@ -182,9 +270,6 @@
 
     private string WeekdayText => "日一二三四五六"[(int)Date.DayOfWeek].ToString();
 
-    // 鎖定規則統一由 OrderLockPolicy 判斷（與伺服器端相同）
-    private bool IsLockedNow() =>
-        OrderLockPolicy.IsLocked(Date, AppTime.Now, _lockRecord);
 
     private async Task OnMealChanged(string? value, bool isAdditional)
     {
@@ -212,9 +297,10 @@
         }
 
         // 頁面開著時可能已超過截止時間，選餐當下再檢查一次
-        if (!GlobalState.IsAdmin && IsLockedNow())
+        if (!GlobalState.IsAdmin && !IsEditMode &&
+            OrderLockPolicy.IsLocked(Date, AppTime.Now, _lockRecord))
         {
-            _isFinalLocked = true;
+            RefreshLock();
             RevertToSaved();
             Snackbar.Add("已超過訂餐截止時間，無法修改", Severity.Warning);
             return;
@@ -246,7 +332,8 @@
 
             _savedBentoName = order.BentoItem.Name;
             _savedAddBentoName = order.AdditionalBentoItem.Name;
-            Snackbar.Add("資料已同步", Severity.Info);
+            _ = FlashSavedAsync();
+            await OnOrderSaved.InvokeAsync(order);
         }
         catch (TaskCanceledException)
         {
@@ -256,7 +343,13 @@
         catch (UnauthorizedAccessException ex)
         {
             // 伺服器判定已截止或鎖定
-            _isFinalLocked = true;
+            RefreshLock();
+            if (!_isFinalLocked)
+            {
+                // 伺服器與畫面判斷不一致時，仍以伺服器為準
+                _lockReason = ex.Message;
+                _isFinalLocked = true;
+            }
             RevertToSaved();
             Snackbar.Add(ex.Message, Severity.Warning);
         }
@@ -307,6 +400,6 @@
         }
 
         // 過去日期與當天截止後，即使解鎖也維持鎖定
-        _isFinalLocked = IsLockedNow();
+        RefreshLock();
     }
 }

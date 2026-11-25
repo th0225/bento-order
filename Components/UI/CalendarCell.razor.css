@@ -20,10 +20,44 @@
     box-shadow: 0 8px 20px rgba(255, 152, 0, 0.12);
 }
 
+/* 未來已鎖定（週末、假日、已截止）：較深的底色與明顯的虛線框 */
 .cell-locked {
     background-color: var(--bento-locked-bg);
-    border-style: dashed;
-    opacity: 0.8;
+    border: 1.5px dashed var(--bento-locked-border);
+}
+
+/* 過去的日子：沒有底色與陰影，只留細框並淡化，與未來的鎖定日明顯區分 */
+.cell-past {
+    background-color: transparent;
+    border: 1px solid var(--mud-palette-lines-default);
+    box-shadow: none;
+    opacity: 0.45;
+}
+
+/* 鎖定與過去的格子不能操作，滑鼠移入時不要有可點擊的效果（覆蓋 app.css 的 hover） */
+.cell-locked:hover {
+    transform: none;
+    border-color: var(--bento-locked-border) !important;
+    background-color: var(--bento-locked-bg) !important;
+    box-shadow: none !important;
+}
+
+.cell-past:hover {
+    border-color: var(--mud-palette-lines-default) !important;
+    background-color: transparent !important;
+}
+
+/* 可以訂但還沒訂：橘色邊框提醒 */
+.cell-unordered {
+    border: 1.5px solid var(--mud-palette-primary);
+}
+
+/* 儲存成功後短暫顯示 */
+.saved-check {
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: var(--mud-palette-success);
+    white-space: nowrap;
 }
 
 .lock-overlay {
